@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-confluent-go-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-confluent-go-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-confluent-go-consumer
+    spec:
+      volumes:
+        - name: kafka-config-volume
+          configMap:
+            name: kafka-config
+      containers:
+        - name: kafka-confluent-go-consumer
+          image: ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.6
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_CONFIG_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_CONFIG_FILE
+            - name: KAFKA_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TOPIC
+            - name: SASL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: SASL_USERNAME
+            - name: SASL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: SASL_PASSWORD
+          volumeMounts:
+            - name: kafka-config-volume
+              mountPath: /app
+
+      restartPolicy: Always

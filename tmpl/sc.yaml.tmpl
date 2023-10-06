@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-secret
+type: Opaque
+data:
+  SASL_USERNAME: USR
+  SASL_PASSWORD: PWD
+stringData:
+  KAFKA_CONFIG_FILE: "kafka.properties"
+  KAFKA_TOPIC: "test-topic"

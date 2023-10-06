@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  api:
+    container_name: kafka-confluent-go-consumer
+    build:
+      context: ./
+    image: kafka-confluent-go-consumer:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SASL_USERNAME=${SASL_USERNAME}
+      - SASL_PASSWORD=${SASL_PASSWORD}
+      - KAFKA_CONFIG_FILE=/${KAFKA_CONFIG_FILE}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+    volumes:
+      - ./${KAFKA_CONFIG_FILE}:/${KAFKA_CONFIG_FILE}
+    networks:
+      kafka_confluent_net:
+        ipv4_address: 172.28.1.12
+    env_file:
+      - .env
+volumes:
+  db:
+    driver: local
+networks:
+  kafka_confluent_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
