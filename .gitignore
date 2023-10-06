@@ -104,5 +104,7 @@ fabric.properties
 **/.bin
 kafka.properties
 .env
-./k8s/cm.yaml
-./k8s/sc.yaml
+k8s/cm.yaml
+k8s/sc.yaml
+scripts/set-cluster.sh
+scripts/set-keys.sh
