@@ -113,6 +113,12 @@ make k8s-deploy
 make consumer-image-run
 ```
 
+## Run Confluent Kafka Producer locally
+
+```bash
+make runp
+```
+
 ## Help
 
 ```text
