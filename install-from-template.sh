@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#
+# bash <(curl -s https://raw.githubusercontent.com/AndriyKalashnykov/sim/main/install.sh)
+#
 
 set -euo pipefail
 
