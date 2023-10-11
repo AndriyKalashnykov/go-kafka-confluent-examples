@@ -4,7 +4,9 @@ on:
   push:
 
 jobs:
+
   staticcheck:
+
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -13,6 +15,7 @@ jobs:
         with:
           version: "2023.1.6"
   tests:
+
     strategy:
       matrix:
         name: [unit]
@@ -37,6 +40,7 @@ jobs:
         run: make test
 
   builds:
+
     timeout-minutes: 20
     strategy:
       matrix:
@@ -60,6 +64,7 @@ jobs:
       run: make build
 
   tag:
+
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     needs: [tests, staticcheck, builds]
