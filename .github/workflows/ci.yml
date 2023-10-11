@@ -22,7 +22,7 @@ jobs:
         go-version: ['1.21']
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    name: test (${{ matrix.name }}-${{ matrix.os }})
+    name: test (${{ matrix.name }},${{ matrix.os }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
