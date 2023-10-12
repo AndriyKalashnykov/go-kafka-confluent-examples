@@ -107,3 +107,4 @@ kafka.properties
 k8s/cm.yaml
 k8s/sc.yaml
 scripts/cs.sh
+/dist

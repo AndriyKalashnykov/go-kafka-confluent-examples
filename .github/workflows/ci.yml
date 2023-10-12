@@ -63,6 +63,21 @@ jobs:
     - name: Build
       run: make build
 
+  release_binaries:
+    if: github.ref_type == 'tag'
+    needs: [tests, staticcheck, builds]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: goreleaser
+        uses: docker://goreleaser/goreleaser:latest
+        env:
+          GITHUB_USER: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: release --config goreleaser.yml
+
   tag:
 
     if: github.ref_type == 'tag'
@@ -104,7 +119,7 @@ jobs:
       with:
         context: .
         file: ./Dockerfile.consumer
-        platforms: linux/amd64
+        platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/386,linux/arm/v7,linux/arm/v6
         push: ${{ github.ref_type == 'tag' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

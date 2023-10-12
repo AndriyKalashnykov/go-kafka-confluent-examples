@@ -83,6 +83,9 @@ runc: build
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/consumer
 
+test-release:
+	goreleaser release --skip-publish --clean --snapshot
+
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:
 	@cat ./k8s/ns.yaml | kubectl apply -f - && \
