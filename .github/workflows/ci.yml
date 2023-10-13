@@ -70,6 +70,13 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Install GCC
+        run: |
+          sudo apt-get -y install build-essential
+          sudo apt-get -y install libmpfr-dev libgmp3-dev libmpc-dev 
+          sudo apt-get -y install gcc-aarch64-linux-gnu
+          sudo apt-get -y install gcc-x86-64-linux-gnu
+          sudo apt-get -y install clang-12 --install-suggests
       - name: goreleaser
         uses: docker://goreleaser/goreleaser:latest
         env:
@@ -123,6 +130,8 @@ jobs:
         file: ./Dockerfile.consumer
         platforms: linux/amd64,linux/arm64
         push: true
+        provenanance: false
+        sbom: false
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
