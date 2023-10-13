@@ -5,8 +5,7 @@ env:
 
 before:
   hooks:
-    - go mod tidy
-    - go get ./...
+    - go mod download
 builds:
 
   - id: consumer
