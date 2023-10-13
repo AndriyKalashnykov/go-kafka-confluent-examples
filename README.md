@@ -17,12 +17,7 @@ and deploy it to Kubernetes.
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional  
   ```bash  
-  sudo apt-get -y install build-essential gcc
-  sudo apt-get -y install libmpfr-dev libgmp3-dev libmpc-dev 
-  sudo apt-get -y install gcc-aarch64-linux-gnu
-  sudo apt-get -y install gcc-x86-64-linux-gnu
-  sudo apt-get -y install clang-12 --install-suggests
-  sudo apt-get -y install gcc g++ libtool musl-dev librdkafka-dev pkgconf
+  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
   ```
 
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)
