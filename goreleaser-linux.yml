@@ -1,7 +1,7 @@
-project_name: sim
+project_name: consumer
+
 env:
   - GO111MODULE=on
-  - CGO_ENABLED=1
 
 before:
   hooks:
@@ -9,33 +9,52 @@ before:
     - go get ./...
 builds:
 
-  - id: consumer-darwin-amd64
+  - id: consumer
     binary: consumer
-    main: ./consumer/consumer.go
-    ldflags: -s -w -X main.version={{ .Version }}
+    main: ./consumer/
     goos:
-      - darwin
+      - linux
     goarch:
       - amd64
     env:
-      - CC=o64-clang
-      - CXX=o64-clang++
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
     flags:
       - -trimpath
+    ldflags:
+      - -extldflags "-lc -lrt -lpthread --static"
+      - -s -w -X main.version={{ .Version }}
 
-  - id: consumer-darwin-arm64
+  - id: consumer-linux-arm64
     binary: consumer
     main: ./consumer/consumer.go
-    ldflags: -s -w -X main.version={{ .Version }}
-    goos:
-      - darwin
     goarch:
       - arm64
+    goos:
+      - linux
     env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
     flags:
       - -trimpath
+    ldflags:
+      - -extldflags "-lc -lrt -lpthread --static"
+      - -s -w -X main.version={{ .Version }}
+
+#    env:
+#      - >-
+#        {{- if eq .Os "linux" }}
+#          {{- if eq .Arch "amd64" }}CC=x86_64-w64-mingw32-gcc{{- end }}
+#        {{- end }}
+#        {{- if eq .Os "darwin" }}
+#          {{- if eq .Arch "amd64"}}CC=o64-clang{{- end }}
+#          {{- if eq .Arch "arm64"}}CC=aarch64-apple-darwin20.2-clang{{- end }}
+#        {{- end }}
+#        {{- if eq .Os "windows" }}
+#          {{- if eq .Arch "amd64" }}CC=x86_64-linux-gnu-g++{{- end }}
+#        {{- end }}
 
 archives:
   - files:

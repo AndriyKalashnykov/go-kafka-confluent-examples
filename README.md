@@ -9,11 +9,20 @@ and deploy it to Kubernetes.
 
 ### Requirements
 
-- Linux or Mac OS
+- Linux (Ubuntu) or Mac OS
 - [gvm](https://github.com/moovweb/gvm) Go 1.21.1
   ```bash
   gvm install go1.21.1 --prefer-binary --with-build-tools --with-protobuf
   gvm use go1.21.1 --default
+  ```
+- [Cross compilation on Ubuntu with CGO ] Optional  
+  ```bash  
+  sudo apt-get -y install build-essential
+  sudo apt-get -y install libmpfr-dev libgmp3-dev libmpc-dev 
+  sudo apt-get -y install gcc-aarch64-linux-gnu
+  sudo apt-get -y install gcc-x86-64-linux-gnu
+  sudo apt-get -y install clang-12 --install-suggests
+  sudo apt-get -y install gcc g++ libtool musl-dev librdkafka-dev pkgconf
   ```
 
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)

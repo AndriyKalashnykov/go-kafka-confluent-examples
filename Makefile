@@ -5,6 +5,14 @@ CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
 GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
+OS ?= $(shell uname -s | tr A-Z a-z)
+#OS:= $(shell echo $(OSRAW) | tr A-Z a-z)
+#UNAMEOEXISTS=$(shell uname -o &>/dev/null; echo $$?)
+#ifeq ($(UNAMEOEXISTS),0)
+#  OS=$(shell uname -o)
+#else
+#  OS=$(shell uname -s)
+#endif
 
 # include .env
 define setup_env
@@ -83,8 +91,8 @@ runc: build
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/consumer
 
-test-release:
-	goreleaser release --skip-publish --clean --snapshot
+test-release: clean
+	goreleaser release -f goreleaser-${OS}.yml --skip-publish --clean --snapshot
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:
