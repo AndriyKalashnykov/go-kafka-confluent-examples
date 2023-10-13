@@ -72,13 +72,23 @@ jobs:
         uses: actions/checkout@v4
       - name: Install GCC
         run: sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
+
       - name: goreleaser
-        uses: docker://goreleaser/goreleaser:latest
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --rm-dist --config goreleaser-linux.yml
         env:
           GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: release --config goreleaser-linux.yml
+
+#      - name: goreleaser
+#        uses: docker://goreleaser/goreleaser:latest
+#        env:
+#          GITHUB_USER: ${{ github.repository_owner }}
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          args: release --config goreleaser-linux.yml
 
   release-docker-images:
     if: github.ref_type == 'tag'
