@@ -69,7 +69,7 @@ nfpms:
 dockers:
   - image_templates:
       - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-amd64'
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.consumer
     use: buildx
     goos: linux
     goarch: amd64
@@ -89,7 +89,7 @@ dockers:
 
   - image_templates:
       - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-arm64'
-    dockerfile:  Dockerfile
+    dockerfile:  Dockerfile.consumer
     use: buildx
     goos: linux
     goarch: arm64
