@@ -63,7 +63,7 @@ jobs:
       - name: Build
         run: make build
 
-  release-linux-binaries:
+  release:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
@@ -94,59 +94,59 @@ jobs:
           GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release-docker-images:
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    needs: [tests, staticcheck, builds]
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    - name: Convert owner to lower case
-      run: |
-        echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-      env:
-        OWNER: '${{ github.repository_owner }}'
-
-    - name: Login to image repository
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GH_ACCESS_TOKEN }}
-
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/${{ env.OWNER_LC }}/kafka-confluent-go-consumer
-        flavor: latest=true
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern=v{{version}}
-        labels: |
-          org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
-          org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
-          io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
-          io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]
-          io.artifacthub.package.license=MIT
-
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.consumer
-        platforms: linux/amd64,linux/arm64
-        push: true
-        provenance: false
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+#  release-docker-images:
+#    if: github.ref_type == 'tag'
+#    runs-on: ubuntu-latest
+#    needs: [tests, staticcheck, builds]
+#
+#    steps:
+#    - name: Checkout
+#      uses: actions/checkout@v4
+#      with:
+#        fetch-depth: 0
+#    - name: Set up QEMU
+#      uses: docker/setup-qemu-action@v3
+#    - name: Set up Docker Buildx
+#      uses: docker/setup-buildx-action@v3
+#    - name: Convert owner to lower case
+#      run: |
+#        echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+#      env:
+#        OWNER: '${{ github.repository_owner }}'
+#
+#    - name: Login to image repository
+#      uses: docker/login-action@v3
+#      with:
+#        registry: ghcr.io
+#        username: ${{ github.actor }}
+#        password: ${{ secrets.GH_ACCESS_TOKEN }}
+#
+#    - name: Docker meta
+#      id: meta
+#      uses: docker/metadata-action@v5
+#      with:
+#        images: ghcr.io/${{ env.OWNER_LC }}/kafka-confluent-go-consumer
+#        flavor: latest=true
+#        tags: |
+#          type=ref,event=branch
+#          type=ref,event=pr
+#          type=semver,pattern=v{{version}}
+#        labels: |
+#          org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
+#          org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
+#          io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
+#          io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]
+#          io.artifacthub.package.license=MIT
+#
+#    - name: Build and push
+#      uses: docker/build-push-action@v5
+#      with:
+#        context: .
+#        file: ./Dockerfile.consumer
+#        platforms: linux/amd64,linux/arm64
+#        push: true
+#        provenance: false
+#        tags: ${{ steps.meta.outputs.tags }}
+#        labels: ${{ steps.meta.outputs.labels }}
+#        cache-from: type=gha
+#        cache-to: type=gha,mode=max
