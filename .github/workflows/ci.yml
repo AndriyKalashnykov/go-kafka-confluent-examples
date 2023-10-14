@@ -36,7 +36,11 @@ jobs:
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('tests/go.sum') }}
-      - name: Run ${{ matrix.name }}-${{ matrix.os }} tests
+
+      - name: Create temporary .env
+        run: touch .env
+
+      - name: Run ${{ matrix.name }} - ${{ matrix.os }} tests
         run: make test
 
   builds:
@@ -60,7 +64,10 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Build
+      - name: Create temporary .env
+        run: touch .env
+
+      - name: Build ${{ matrix.os }} - ${{ matrix.go-version }}
         run: make build
 
   release-binaries:

@@ -116,5 +116,6 @@ k8s-undeploy:
 # pod logs
 # kubectl logs -n kafka-confluent-examples kafka-confluent-go-56686b9958-ft2bh --follow --timestamps
 
-# docker pull --platform=linux/amd64 ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.12
-# docker inspect 6b7fe811d63f | jq .[].Architecture
+# docker pull --platform=linux/amd64 ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.19
+# docker pull --platform=linux/arm64 ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.19
+# docker inspect ded258717010 | jq .[].Architecture

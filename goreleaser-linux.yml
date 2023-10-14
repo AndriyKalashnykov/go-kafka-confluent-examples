@@ -66,58 +66,6 @@ nfpms:
       - rpm
     bindir: /usr/bin
 
-#dockers:
-#  - image_templates:
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-amd64'
-#    dockerfile: Dockerfile.consumer
-#    context: ./
-#    use: buildx
-#    goos: linux
-#    goarch: amd64
-#    build_flag_templates:
-#      - "--pull"
-#      - "--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/andriykalashnykov/sim/main/README.md"
-#      - "--label=io.artifacthub.package.logo-url=https://raw.githubusercontent.com/andriykalashnykov/sim/main/assets/images/logo.png"
-#      - "--label=io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]"
-#      - "--label=io.artifacthub.package.license=MIT"
-#      - "--label=org.opencontainers.image.description=PEP protocol simulator"
-#      - "--label=org.opencontainers.image.created={{.Date}}"
-#      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-#      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-#      - "--label=org.opencontainers.image.version={{.Version}}"
-#      - "--label=org.opencontainers.image.source={{.GitURL}}"
-#      - "--platform=linux/amd64"
-#
-#  - image_templates:
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-arm64'
-#    dockerfile:  Dockerfile.consumer
-#    use: buildx
-#    goos: linux
-#    goarch: arm64
-#    build_flag_templates:
-#      - "--pull"
-#      - "--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/andriykalashnykov/sim/main/README.md"
-#      - "--label=io.artifacthub.package.logo-url=https://raw.githubusercontent.com/andriykalashnykov/sim/main/assets/images/logo.png"
-#      - "--label=io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]"
-#      - "--label=io.artifacthub.package.license=MIT"
-#      - "--label=org.opencontainers.image.description=PEP protocol simulator"
-#      - "--label=org.opencontainers.image.created={{.Date}}"
-#      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-#      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-#      - "--label=org.opencontainers.image.version={{.Version}}"
-#      - "--label=org.opencontainers.image.source={{.GitURL}}"
-#      - "--platform=linux/arm64"
-#
-#docker_manifests:
-#  - name_template: 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}'
-#    image_templates:
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-amd64'
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-arm64'
-#  - name_template: 'ghcr.io/andriykalashnykov/{{.ProjectName}}:latest'
-#    image_templates:
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-amd64'
-#      - 'ghcr.io/andriykalashnykov/{{.ProjectName}}:{{ .Tag }}-arm64'
-
 checksum:
   name_template: "checksums.txt"
 
