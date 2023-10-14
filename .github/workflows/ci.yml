@@ -142,7 +142,7 @@ jobs:
           org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
           org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
           org.opencontainers.image.licenses=MIT
-          org.opencontainers.image.version= ${{  github.ref_name }}"
+          org.opencontainers.image.version=${{  github.ref_name }}"
           io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
           io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]
           io.artifacthub.package.license=MIT
