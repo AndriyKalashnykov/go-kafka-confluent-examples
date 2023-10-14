@@ -93,6 +93,7 @@ runc: build
 
 test-release: clean
 	goreleaser release -f goreleaser-${OS}.yml --skip-publish --clean --snapshot
+	goreleaser release -f goreleaser-darwin.yml --skip-publish --clean --snapshot
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:

@@ -5,13 +5,12 @@ env:
 
 before:
   hooks:
-    - go mod tidy
-    - go get ./...
+    - go mod download
 builds:
 
-  - id: consumer
+  - id: consumer-darwin-amd64
     binary: consumer
-    main: ./consumer/
+    main: ./consumer/consumer.go
     goos:
       - darwin
     goarch:
@@ -25,21 +24,21 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
-#  - id: consumer-linux-arm64
-#    binary: consumer
-#    main: ./consumer/consumer.go
-#    goarch:
-#      - arm64
-#    goos:
-#      - linux
-#    env:
-#      - CGO_ENABLED=1
-#      - CC=oa64-clang
-#      - CXX=oa64-clang++
-#    flags:
-#      - -trimpath
-#    ldflags:
-#      - -s -w -X main.version={{ .Version }}
+  - id: consumer-linux-arm64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
 
 archives:
   - files:
@@ -49,21 +48,6 @@ archives:
         goos: windows
     id: consumer
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
-
-nfpms:
-  - builds:
-      - consumer
-    vendor: AndriyKalashnykov
-    homepage:  https://github.com/andriykalashnykov/go-kafka-confluent-examples
-    maintainer: "Andriy Kalashnykov <andriykalashnykov@gmail.com>"
-    description: "Confluent Kafka Cloud Consumer in Go"
-    license: GPL-3.0
-    file_name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
-    formats:
-      - apk
-      - deb
-      - rpm
-    bindir: /usr/bin
 
 checksum:
   name_template: "checksums.txt"

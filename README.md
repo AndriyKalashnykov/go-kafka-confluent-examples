@@ -16,12 +16,31 @@ and deploy it to Kubernetes.
   gvm use go1.21.1 --default
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional  
-  ```bash  
-  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
+  ```
+  sudo apt-get install -y clang-14 clang-tools-14 lld-14 musl-tools libclang-14-dev clang-format-14 clang-tidy-14 llvm-14-dev libc++*14-dev libc++abi-*14-dev
+  sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+  sudo apt-get install -y libssl-dev libghc-zlib-dev libcurl4-gnutls-dev libexpat1-dev libcurl4-openssl-dev libcurl4-nss-dev gettext unzip
+  sudo apt-get install -y build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu --install-suggests
+  sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc6-dev-armhf-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross  
   ```
 - [Cross compilation on MacOS with CGO ] Optional
   ```bash  
   brew install llvm
+  
+  ROOTDIR=/tmp
+  mkdir -p $ROOTDIR/osxcross
+  cd $ROOTDIR
+  # sudo git clone https://github.com/tpoechtrager/osxcross.git
+  # sudo git clone git@github.com:tpoechtrager/osxcross.git
+  curl -L -o $ROOTDIR/osxcross.zip https://github.com/tpoechtrager/osxcross/archive/refs/heads/master.zip
+  unzip $ROOTDIR/osxcross.zip -d $ROOTDIR/osxcross
+  mv $ROOTDIR/osxcross/osxcross-master/* $ROOTDIR/osxcross/
+  rm -rf $ROOTDIR/osxcross/osxcross-master
+  cd $ROOTDIR/osxcross
+  # https://github.com/joseluisq/macosx-sdks/
+  curl -L -o ./tarballs/MacOSX14.0.sdk.tar.xz https://github.com/joseluisq/macosx-sdks/releases/download/14.0/MacOSX14.0.sdk.tar.xz
+  UNATTENDED=1 PORTABLE=true ./build.sh
+  export PATH=$PATH:/tmp/osxcross/target/bin
   ```
   
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)
