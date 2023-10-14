@@ -86,7 +86,7 @@ jobs:
         run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
 
       - name: Install Clang and libs - 3
-        run: sudo apt-get install -y libssl-dev libghc-zlib-dev libcurl4-gnutls-dev libexpat1-dev libcurl4-openssl-dev libcurl4-nss-dev gettext unzip
+        run: sudo apt-get install -y libssl-dev libghc-zlib-dev libexpat1-dev gettext unzip
 
       - name: Install Clang and libs - 4
         run: sudo apt-get install -y build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu --install-suggests
