@@ -18,9 +18,9 @@ jobs:
 
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest]
         name: [unit]
         go-version: [1.21]
-        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
