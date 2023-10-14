@@ -17,7 +17,7 @@ and deploy it to Kubernetes.
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional  
   ```bash  
-  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-multilib g++-multilib gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
+  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
   ```
 - [Cross compilation on MacOS with CGO ] Optional
   ```bash  
