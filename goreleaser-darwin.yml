@@ -25,21 +25,21 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
-  - id: consumer-linux-arm64
-    binary: consumer
-    main: ./consumer/consumer.go
-    goarch:
-      - arm64
-    goos:
-      - linux
-    env:
-      - CGO_ENABLED=1
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-    flags:
-      - -trimpath
-    ldflags:
-      - -s -w -X main.version={{ .Version }}
+#  - id: consumer-linux-arm64
+#    binary: consumer
+#    main: ./consumer/consumer.go
+#    goarch:
+#      - arm64
+#    goos:
+#      - linux
+#    env:
+#      - CGO_ENABLED=1
+#      - CC=oa64-clang
+#      - CXX=oa64-clang++
+#    flags:
+#      - -trimpath
+#    ldflags:
+#      - -s -w -X main.version={{ .Version }}
 
 archives:
   - files:

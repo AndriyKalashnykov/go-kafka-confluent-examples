@@ -17,9 +17,13 @@ and deploy it to Kubernetes.
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional  
   ```bash  
-  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
+  sudo apt-get -y install build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-multilib g++-multilib gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu clang-12 --install-suggests
   ```
-
+- [Cross compilation on MacOS with CGO ] Optional
+  ```bash  
+  brew install llvm
+  ```
+  
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)
   ```bash
   curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest
@@ -27,8 +31,9 @@ and deploy it to Kubernetes.
   # log in to a Confluent Cloud organization
   confluent login --save
   ```
-- [docker](https://docs.docker.com/engine/install/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [docker](https://docs.docker.com/engine/install/) Optional
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) Optional
+- [GoReleaser](https://goreleaser.com/install/) Optional
 
 ## Configure Confluent Kafka Go client
 
