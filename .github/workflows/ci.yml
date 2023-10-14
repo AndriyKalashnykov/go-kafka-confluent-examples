@@ -149,7 +149,6 @@ jobs:
         push: true
         provenance: false
         tags: |
-          ${{ env.IMAGE }}:${{ github.sha }}-${{ github.run_number }}
           ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
