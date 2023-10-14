@@ -40,7 +40,7 @@ jobs:
       - name: Create temporary .env
         run: touch .env
 
-      - name: Run ${{ matrix.name }} - ${{ matrix.os }} tests
+      - name: Run [${{ matrix.name }} - ${{ matrix.os }}] tests
         run: make test
 
   builds:
@@ -67,7 +67,7 @@ jobs:
       - name: Create temporary .env
         run: touch .env
 
-      - name: Build ${{ matrix.os }} - ${{ matrix.go-version }}
+      - name: Build [${{ matrix.os }} - ${{ matrix.go-version }}]
         run: make build
 
   release-binaries:
