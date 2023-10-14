@@ -63,7 +63,7 @@ jobs:
       - name: Build
         run: make build
 
-  release:
+  release-binaries:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
@@ -121,6 +121,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GH_ACCESS_TOKEN }}
 
+    - name: GitHub Tag Name example
+      run: |
+        echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+        echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -133,8 +138,11 @@ jobs:
           type=ref,event=pr
           type=semver,pattern=v{{version}}
         labels: |
+          org.opencontainers.image.vendor=Andriy Kalashnykov - andriykalashnykov@gmail.com
           org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
           org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
+          org.opencontainers.image.licenses=MIT
+          org.opencontainers.image.version= ${{  github.ref_name }}"
           io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
           io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]
           io.artifacthub.package.license=MIT
@@ -148,8 +156,7 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         provenance: false
-        tags: |
-          ${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
