@@ -19,7 +19,7 @@ and deploy it to Kubernetes.
   ```
   sudo apt-get install -y clang-14 clang-tools-14 lld-14 musl-tools libclang-14-dev clang-format-14 clang-tidy-14 llvm-14-dev libc++*14-dev libc++abi-*14-dev
   sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
-  sudo apt-get install -y libssl-dev libghc-zlib-dev libcurl4-gnutls-dev libexpat1-dev libcurl4-openssl-dev libcurl4-nss-dev gettext unzip
+  sudo apt-get install -y libssl-dev libghc-zlib-dev libexpat1-dev gettext unzip
   sudo apt-get install -y build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu --install-suggests
   sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf libc6-dev-armhf-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross  
   ```
