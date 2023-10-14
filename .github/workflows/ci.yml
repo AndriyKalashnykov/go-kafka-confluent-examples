@@ -31,7 +31,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: go mod package cache
+      - name: Set Go mod package cache
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
@@ -67,7 +67,7 @@ jobs:
       - name: Create temporary .env
         run: touch .env
 
-      - name: Build [${{ matrix.os }} - ${{ matrix.go-version }}]
+      - name: Build [go${{ matrix.go-version }} - ${{ matrix.os }}]
         run: make build
 
   release-binaries:
