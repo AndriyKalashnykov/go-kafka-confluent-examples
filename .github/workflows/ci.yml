@@ -97,11 +97,11 @@ jobs:
           docker run --rm --privileged \
           -e GITHUB_USER=${{ github.repository_owner }} \
           -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-          -v $(CURDIR):/golang-cross-example \
+          -v $PWD:/golang-cross-example \
           -v /var/run/docker.sock:/var/run/docker.sock \
-          -v $(GOPATH)/src:/go/src \
+          -v $GOPATH/src:/go/src \
           -w /golang-cross-example \
-          ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --clean
+          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
 
 #      - name: Run GoReleaser
 #        uses: goreleaser/goreleaser-action@v5
