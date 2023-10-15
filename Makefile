@@ -1,25 +1,21 @@
-.DEFAULT_GOAL := help
-
 CONSUMER_IMG ?= kafka-confluent-go-consumer:latest
 CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
 GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
 OS ?= $(shell uname -s | tr A-Z a-z)
-#OS:= $(shell echo $(OSRAW) | tr A-Z a-z)
-#UNAMEOEXISTS=$(shell uname -o &>/dev/null; echo $$?)
-#ifeq ($(UNAMEOEXISTS),0)
-#  OS=$(shell uname -o)
-#else
-#  OS=$(shell uname -s)
-#endif
+ENVFILE=./.env
 
-# include .env
 define setup_env
-$(eval include .env)
-$(eval export $(shell sed -ne 's/ *#.*$$//; /./ s/=.*$$// p' .env))
+$(eval include $(ENVFILE))
+$(eval export $(shell sed -ne 's/ *#.*$$//; /./ s/=.*$$// p' $(ENVFILE)))
 endef
-$(eval export $(shell sed -ne 's/ *#.*$$//; /./ s/=.*$$// p' .env))
+
+ifneq (,$(wildcard $(ENVFILE)))
+$(eval export $(shell sed -ne 's/ *#.*$$//; /./ s/=.*$$// p' $(ENVFILE)))
+endif
+
+.DEFAULT_GOAL := help
 
 #help: @ List available tasks
 help:
@@ -27,6 +23,7 @@ help:
 	@echo "Usage: make COMMAND"
 	@echo "Commands :"
 	@grep -E '[a-zA-Z\.\-]+:.*?@ .*$$' $(MAKEFILE_LIST)| tr -d '#' | awk 'BEGIN {FS = ":.*?@ "}; {printf "\033[32m%-20s\033[0m - %s\n", $$1, $$2}'
+
 
 #clean: @ Cleanup
 clean:
@@ -72,7 +69,9 @@ consumer-image-build: build
 
 #consumer-image-run: @ Run a Docker image
 consumer-image-run: consumer-image-stop
+ifneq (,$(wildcard $(ENVFILE)))
 	$(call setup_env)
+endif
 	docker compose -f "docker-compose.yml" up
 
 #consumer-image-stop: @ Run a Docker image
@@ -81,13 +80,17 @@ consumer-image-stop:
 
 #runp: @ Run producer
 runp: build
+ifneq (,$(wildcard $(ENVFILE)))
 	$(call setup_env)
+endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/producer
 
 #runc: @ Run consumer
 runc: build
+ifneq (,$(wildcard $(ENVFILE)))
 	$(call setup_env)
+endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/consumer
 
