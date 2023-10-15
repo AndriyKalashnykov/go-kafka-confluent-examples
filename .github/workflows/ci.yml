@@ -97,7 +97,7 @@ jobs:
           docker run --rm --privileged \
           -e GITHUB_USER=${{ github.repository_owner }} \
           -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-          -v $PWD:/golang-cross-example \
+          -v ${{ github.workspace }}:/golang-cross-example \
           -v /var/run/docker.sock:/var/run/docker.sock \
           -v $GOPATH/src:/go/src \
           -w /golang-cross-example \
