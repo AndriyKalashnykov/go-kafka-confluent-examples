@@ -92,6 +92,7 @@ jobs:
 #        with:
 #          go-version: ${{ matrix.go-version }}
 
+      - name: Run GoReleaser with cross compilation
         run: |
           docker run --rm --privileged \
           -e GITHUB_USER=${{ github.repository_owner }} \
