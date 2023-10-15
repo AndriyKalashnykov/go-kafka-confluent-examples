@@ -95,16 +95,13 @@ jobs:
       - env:
           GITHUB_USER: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMIT_SHA: ${{ github.sha }}
           PROJECT_PATH: ${{ github.workspace }}
         run: |
           docker run --rm --privileged \
-          -e "GITHUB_USER=${GITHUB_USER}" \
-          -e "GITHUB_TOKEN=${GITHUB_TOKEN}" \
-          -v "${PROJECT_PATH}:/golang-cross-example" \
-          -v /var/run/docker.sock:/var/run/docker.sock \
+          -e GITHUB_USER=${GITHUB_USER} \
+          -e GITHUB_TOKEN=${GITHUB_TOKEN} \
+          -v ${PROJECT_PATH}:/golang-cross-example \
           -v $GOPATH/src:/go/src \
-          -w /golang-cross-example \
           ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
 
 #      - name: Run GoReleaser
