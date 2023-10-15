@@ -84,15 +84,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name:  Install libraries for cross compilation
-        run: ./scripts/install-cross-libs-ubuntu.sh
+#      - name:  Install libraries for cross compilation
+#        run: ./scripts/install-cross-libs-ubuntu.sh
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v4
+#        with:
+#          go-version: ${{ matrix.go-version }}
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Run GoReleaser with cross compilation
         run: |
           docker run --rm --privileged \
           -e GITHUB_USER=${{ github.repository_owner }} \
