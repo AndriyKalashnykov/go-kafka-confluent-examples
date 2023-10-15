@@ -5,8 +5,9 @@ GOFLAGS=-mod=mod
 GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
 OS ?= $(shell uname -s | tr A-Z a-z)
 ENVFILE=./.env
+GO_BUILDER_VERSION=v1.21.3
 
-define setup_env
+define load_env
 $(eval include $(ENVFILE))
 $(eval export $(shell sed -ne 's/ *#.*$$//; /./ s/=.*$$// p' $(ENVFILE)))
 endef
@@ -70,7 +71,7 @@ consumer-image-build: build
 #consumer-image-run: @ Run a Docker image
 consumer-image-run: consumer-image-stop
 ifneq (,$(wildcard $(ENVFILE)))
-	$(call setup_env)
+	$(call load_env)
 endif
 	docker compose -f "docker-compose.yml" up
 
@@ -81,7 +82,7 @@ consumer-image-stop:
 #runp: @ Run producer
 runp: build
 ifneq (,$(wildcard $(ENVFILE)))
-	$(call setup_env)
+	$(call load_env)
 endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/producer
@@ -89,14 +90,18 @@ endif
 #runc: @ Run consumer
 runc: build
 ifneq (,$(wildcard $(ENVFILE)))
-	$(call setup_env)
+	$(call load_env)
 endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/consumer
 
 test-release: clean
-	goreleaser release -f goreleaser-${OS}.yml --skip-publish --clean --snapshot
-	goreleaser release -f goreleaser-darwin.yml --skip-publish --clean --snapshot
+	docker run --rm --privileged \
+		-v $(CURDIR):/golang-cross-example \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(GOPATH)/src:/go/src \
+		-w /golang-cross-example \
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip-publish --clean --snapshot
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:

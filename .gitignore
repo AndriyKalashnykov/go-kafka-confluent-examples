@@ -110,3 +110,4 @@ scripts/cs.sh
 /dist
 
 .DS_Store
+llvm.sh

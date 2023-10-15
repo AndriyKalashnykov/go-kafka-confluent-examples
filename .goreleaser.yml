@@ -10,7 +10,7 @@ builds:
 
   - id: consumer
     binary: consumer
-    main: ./consumer/
+    main: ./consumer/consumer.go
     goos:
       - linux
     goarch:
@@ -41,6 +41,53 @@ builds:
     ldflags:
       - -extldflags "-lc -lrt -lpthread --static"
       - -s -w -X main.version={{ .Version }}
+
+  - id: consumer-darwin-amd64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+  - id: consumer-darwin-arm64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+#  - id: consumer-windows-amd64
+#    binary: consumer
+#    main: ./consumer/consumer.go
+#    goarch:
+#      - amd64
+#    goos:
+#      - windows
+#    env:
+#      - CGO_ENABLED=1
+#      - CC=x86_64-w64-mingw32-gcc
+#      - CXX=x86_64-w64-mingw32-g++
+#    flags:
+#      - -trimpath
+#      - -buildmode=exe
 
 archives:
   - files:
