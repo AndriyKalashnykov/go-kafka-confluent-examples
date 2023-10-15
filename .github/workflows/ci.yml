@@ -79,13 +79,13 @@ jobs:
     needs: [tests, staticcheck, builds]
     runs-on:  ${{ matrix.os }}
     steps:
-      - name:  Install libraries for cross compilation
-        run: ./scripts/install-cross-libs-ubuntu.sh
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name:  Install libraries for cross compilation
+        run: ./scripts/install-cross-libs-ubuntu.sh
 
       - name: Set up Go
         uses: actions/setup-go@v4

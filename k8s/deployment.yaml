@@ -18,7 +18,7 @@ spec:
             name: kafka-config
       containers:
         - name: kafka-confluent-go-consumer
-          image: ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.25
+          image: ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.26
           ports:
             - containerPort: 8080
           env:
