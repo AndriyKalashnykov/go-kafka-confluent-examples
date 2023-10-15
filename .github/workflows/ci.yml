@@ -105,7 +105,7 @@ jobs:
           -v /var/run/docker.sock:/var/run/docker.sock \
           -v $GOPATH/src:/go/src \
           -w /golang-cross-example \
-          ghcr.io/gythialy/golang-cross:v1.21.3 --clean
+          ghcr.io/gythialy/golang-cross:v1.21.3 --clean 
 
 #      - name: Run GoReleaser
 #        uses: goreleaser/goreleaser-action@v5
