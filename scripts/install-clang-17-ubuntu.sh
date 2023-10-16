@@ -16,7 +16,7 @@ sudo apt autoremove -y
 
 wget https://apt.llvm.org/llvm.sh
 chmod +x llvm.sh
-sudo ./llvm.sh 17
+sudo ./llvm.sh 17 all
 
 sudo apt-get install -y clang-tidy-17 clang-format-17 libclang-17-dev clang-tools-17 lld-17 libclang-17-dev llvm-17-dev libc++*17-dev libc++abi-*17-dev
 
