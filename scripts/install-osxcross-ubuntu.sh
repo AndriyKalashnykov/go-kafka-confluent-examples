@@ -28,7 +28,18 @@ rm -rf $ROOTDIR/$OSXCROSSDIR/osxcross-master
 cd $ROOTDIR/$OSXCROSSDIR || exit 1
 # https://github.com/joseluisq/macosx-sdks/
 curl -L -o ./tarballs/$MACOSXSDK https://github.com/joseluisq/macosx-sdks/releases/download/14.0/$MACOSXSDK
+
 UNATTENDED=1 PORTABLE=true ./build.sh
+UNATTENDED=1 PORTABLE=true ./build_gcc.sh
+UNATTENDED=1 PORTABLE=true ./build_apple_clang.sh*
+
+#git lfs migrate import --include=bin/x86_64-apple-darwin23-lto-dump
+#git lfs migrate import --include=libexec/gcc/x86_64-apple-darwin23/13.2.0/cc1
+#git lfs migrate import --include=libexec/gcc/x86_64-apple-darwin23/13.2.0/cc1obj
+#git lfs migrate import --include=libexeclibexec/gcc/x86_64-apple-darwin23/13.2.0/cc1objplus
+#git lfs migrate import --include=libexec/gcc/x86_64-apple-darwin23/13.2.0/cc1objplus
+#git lfs migrate import --include=libexec/gcc/x86_64-apple-darwin23/13.2.0/cc1plus
+#git lfs migrate import --include=libexec/gcc/x86_64-apple-darwin23/13.2.0/lto1
 
 echo "Don't forget to add to the PATH"
 echo 'export PATH=$PATH:$ROOTDIR/$OSXCROSSDIR/target/bin'
