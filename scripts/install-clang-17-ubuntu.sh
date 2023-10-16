@@ -14,9 +14,8 @@ fi
 sudo apt-get purge -y llvm-17 clang-17
 sudo apt autoremove -y
 
-wget https://apt.llvm.org/llvm.sh
-chmod +x llvm.sh
-sudo ./llvm.sh 17 all
+sudo curl -s https://apt.llvm.org/llvm.sh | sudo bash /dev/stdin 17 all
+#wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && sudo ./llvm.sh 17 all
 
 sudo apt-get install -y clang-tidy-17 clang-format-17 libclang-17-dev clang-tools-17 lld-17 libclang-17-dev llvm-17-dev libc++*17-dev libc++abi-*17-dev
 
