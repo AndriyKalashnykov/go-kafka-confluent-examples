@@ -101,7 +101,8 @@ test-release: clean
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
 		-w /golang-cross-example \
-		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip-publish --clean --snapshot
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
+#	export PATH=$PATH:/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin && goreleaser --skip=publish --clean --snapshot
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:
