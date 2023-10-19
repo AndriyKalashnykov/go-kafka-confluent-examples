@@ -6,6 +6,7 @@ GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
 OS ?= $(shell uname -s | tr A-Z a-z)
 ENVFILE=./.env
 GO_BUILDER_VERSION=v1.21.3
+OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 define load_env
 $(eval include $(ENVFILE))
@@ -28,7 +29,7 @@ help:
 
 #clean: @ Cleanup
 clean:
-	@rm -rf .bin/
+	@sudo rm -rf .bin/ dist/
 
 #build: @ Build
 build: clean
@@ -101,8 +102,22 @@ test-release: clean
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
 		-w /golang-cross-example \
-		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot
-#	export PATH=$PATH:/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin && goreleaser --skip=publish --clean --snapshot
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
+
+	docker run --rm --privileged \
+		-v $(CURDIR):/golang-cross-example \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(GOPATH)/src:/go/src \
+		-w /golang-cross-example \
+		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
+
+#ifeq ($(IS_LINUX), 1)
+#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Linux.yml && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
+#endif
+#ifeq ($(IS_DARWIN), 1)
+#	export PATH=$(OSXCROSS_PATH):${PATH} && goreleaser --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
+#endif
+
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:

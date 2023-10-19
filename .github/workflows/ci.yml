@@ -31,12 +31,6 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-#      - name: Set Go mod package cache
-#        uses: actions/cache@v3
-#        with:
-#          path: ~/go/pkg/mod
-#          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('tests/go.sum') }}
-
       - name: Create temporary .env
         run: touch .env
 
