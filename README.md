@@ -16,7 +16,7 @@ and deploy it to Kubernetes.
   gvm use go1.21.1 --default
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional  
-  Install libraries for cross compilation
+  Install libraries for cross compilation (Windos, etc.)
   ```
   ./scripts/install-cross-libs-ubuntu.sh
   ```
@@ -24,10 +24,6 @@ and deploy it to Kubernetes.
     ```bash
   ./scripts/install-clang-17-ubuntu.sh
   ./scripts/install-osxcross-ubuntu.sh
-  ```
-- [Cross compilation on MacOS with CGO ] Optional
-  ```bash  
-  brew install llvm
   ```
   
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)

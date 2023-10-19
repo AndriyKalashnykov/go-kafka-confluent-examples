@@ -1,0 +1,145 @@
+project_name: consumer
+
+env:
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod download
+builds:
+
+  - id: consumer
+    binary: consumer
+    main: ./consumer/consumer.go
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    flags:
+      - -trimpath
+    ldflags:
+      - -extldflags "-lc -lrt -lpthread --static"
+      - -s -w -X main.version={{ .Version }}
+
+  - id: consumer-linux-arm64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - -trimpath
+    ldflags:
+      - -extldflags "-lc -lrt -lpthread --static"
+      - -s -w -X main.version={{ .Version }}
+
+  - id: consumer-darwin-amd64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+  - id: consumer-darwin-arm64
+    binary: consumer
+    main: ./consumer/consumer.go
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+#  - id: consumer-windows-amd64
+#    binary: consumer
+#    main: ./consumer/consumer.go
+#    goarch:
+#      - amd64
+#    goos:
+#      - windows
+#    env:
+#      - CGO_ENABLED=1
+#      - CC=x86_64-w64-mingw32-gcc
+#      - CXX=x86_64-w64-mingw32-g++
+#    flags:
+#      - -trimpath
+#      - -buildmode=exe
+
+archives:
+  - files:
+      - README.md
+    format_overrides:
+      - format: zip
+        goos: windows
+    id: consumer
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
+
+nfpms:
+  - builds:
+      - consumer
+    vendor: AndriyKalashnykov
+    homepage:  https://github.com/andriykalashnykov/go-kafka-confluent-examples
+    maintainer: "Andriy Kalashnykov <andriykalashnykov@gmail.com>"
+    description: "Confluent Kafka Cloud Consumer in Go"
+    license: GPL-3.0
+    file_name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
+    formats:
+      - apk
+      - deb
+      - rpm
+    bindir: /usr/bin
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+    - '^test:'
+    - '^chore'
+    - 'merge conflict'
+    - Merge pull request
+    - Merge remote-tracking branch
+    - Merge branch
+    - go mod tidy
+  groups:
+    - title: Dependency updates
+      regexp: '^.*?(feat|fix)\(deps\)!?:.+$'
+      order: 300
+    - title: 'New Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 100
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 200
+    - title: 'Documentation updates'
+      regexp: ^.*?doc(\([[:word:]]+\))??!?:.+$
+      order: 400
+    - title: Other work
+      order: 9999
