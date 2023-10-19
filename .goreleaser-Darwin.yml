@@ -8,40 +8,6 @@ before:
     - go mod download
 builds:
 
-  - id: consumer
-    binary: consumer
-    main: ./consumer/consumer.go
-    goos:
-      - linux
-    goarch:
-      - amd64
-    env:
-      - CGO_ENABLED=1
-      - CC=x86_64-linux-gnu-gcc
-      - CXX=x86_64-linux-gnu-g++
-    flags:
-      - -trimpath
-    ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
-      - -s -w -X main.version={{ .Version }}
-
-  - id: consumer-linux-arm64
-    binary: consumer
-    main: ./consumer/consumer.go
-    goarch:
-      - arm64
-    goos:
-      - linux
-    env:
-      - CGO_ENABLED=1
-      - CC=aarch64-linux-gnu-gcc
-      - CXX=aarch64-linux-gnu-g++
-    flags:
-      - -trimpath
-    ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
-      - -s -w -X main.version={{ .Version }}
-
   - id: consumer-darwin-amd64
     binary: consumer
     main: ./consumer/consumer.go
@@ -74,20 +40,6 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
-#  - id: consumer-windows-amd64
-#    binary: consumer
-#    main: ./consumer/consumer.go
-#    goarch:
-#      - amd64
-#    goos:
-#      - windows
-#    env:
-#      - CGO_ENABLED=1
-#      - CC=x86_64-w64-mingw32-gcc
-#      - CXX=x86_64-w64-mingw32-g++
-#    flags:
-#      - -trimpath
-#      - -buildmode=exe
 
 archives:
   - files:
@@ -98,23 +50,8 @@ archives:
     id: consumer
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
 
-nfpms:
-  - builds:
-      - consumer
-    vendor: AndriyKalashnykov
-    homepage:  https://github.com/andriykalashnykov/go-kafka-confluent-examples
-    maintainer: "Andriy Kalashnykov <andriykalashnykov@gmail.com>"
-    description: "Confluent Kafka Cloud Consumer in Go"
-    license: GPL-3.0
-    file_name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{if .Arm}}_{{.Arm}}{{end}}"
-    formats:
-      - apk
-      - deb
-      - rpm
-    bindir: /usr/bin
-
 checksum:
-  name_template: "checksums.txt"
+  name_template: "checksums-darwin.txt"
 
 changelog:
   sort: asc
