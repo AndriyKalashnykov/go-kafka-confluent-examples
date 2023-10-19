@@ -15,8 +15,9 @@ and deploy it to Kubernetes.
   gvm install go1.21.1 --prefer-binary --with-build-tools --with-protobuf
   gvm use go1.21.1 --default
   ```
-- [Cross compilation on Ubuntu with CGO ] Optional  
-  Install libraries for cross compilation (Windos, etc.)
+- [Cross compilation on Ubuntu with CGO ] Optional
+
+  Install libraries for cross compilation (Windows, etc.)
   ```
   ./scripts/install-cross-libs-ubuntu.sh
   ```
@@ -34,8 +35,8 @@ and deploy it to Kubernetes.
   confluent login --save
   ```
 - [docker](https://docs.docker.com/engine/install/) Optional
-- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) Optional
 - [GoReleaser](https://goreleaser.com/install/) Optional
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) Optional
 
 ## Configure Confluent Kafka Go client
 
