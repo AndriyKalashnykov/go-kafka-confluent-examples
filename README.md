@@ -17,13 +17,16 @@ and deploy it to Kubernetes.
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional
 
+  Install [LLVM Compiler Infrastructure, release 17](https://llvm.org/)
+  ```
+  ./scripts/install-clang-17-ubuntu.sh
+  ```
   Install libraries for cross compilation (Windows, etc.)
   ```
   ./scripts/install-cross-libs-ubuntu.sh
   ```
   Install [osxcross](https://github.com/tpoechtrager/osxcross) for MacOS cross compilation
     ```bash
-  ./scripts/install-clang-17-ubuntu.sh
   ./scripts/install-osxcross-ubuntu.sh
   ```
   
