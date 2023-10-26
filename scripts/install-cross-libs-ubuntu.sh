@@ -15,7 +15,7 @@ sudo apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libns
 sudo apt-get install -y cmake git patch gettext unzip musl-tools lzma-dev libssl-dev libxml2-dev libghc-zlib-dev libexpat1-dev bzip2 cpio
 
 #gcc-x86-64-linux-gnu
-sudo apt-get install -y build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu --install-suggests
+sudo apt-get install -y build-essential gcc libmpfr-dev libgmp3-dev libmpc-dev gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu --install-suggests
 sudo apt-get install -y gcc-arm-linux-gnueabihf libc6-dev-armhf-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross --no-install-recommends
 
 ## windows
