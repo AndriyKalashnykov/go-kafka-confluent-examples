@@ -1,5 +1,5 @@
 FROM golang:1.21.3-alpine as builder
-RUN apk --no-cache add ca-certificates git gcc g++ libtool libc-dev musl-dev librdkafka-dev pkgconf cyrus-sasl
+RUN apk --no-cache add ca-certificates git gcc g++ libtool libc-dev musl-dev librdkafka-dev pkgconf libsasl cyrus-sasl
 WORKDIR /app
 COPY go.mod .
 COPY go.sum .
