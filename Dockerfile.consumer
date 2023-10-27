@@ -3,8 +3,8 @@ FROM golang:1.21.3-alpine as builder
 
 ENV LIBRD_VER=2.3.0
 
-# there is no librdkafka v2.3.0 package for apline yet, so we build and install it from repo
-#RUN apk --no-cache add musl-dev librdkafka-dev
+# there is no librdkafka v2.3.0 package for alpine yet, so we build and install it from repo
+#RUN apk --no-cache add musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev musl-dev pkgconf
 
 # Install librdkafka $LIBRD_VER
 # https://gist.github.com/jaihind213/e82d41dc79f52cfa64ca32350bdb27df
