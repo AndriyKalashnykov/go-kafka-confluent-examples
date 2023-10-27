@@ -3,6 +3,7 @@ services:
   api:
     container_name: kafka-confluent-go-consumer
     build:
+      dockerfile: Dockerfile.consumer
       context: ./
     image: kafka-confluent-go-consumer:latest
     ports:

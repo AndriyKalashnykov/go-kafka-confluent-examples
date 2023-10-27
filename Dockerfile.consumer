@@ -1,4 +1,4 @@
-# docker buildx build --build-arg TARGETARCH=arm64 --file Dockerfile.consumer .
+# docker buildx build --build-arg TARGETARCH=arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
 FROM golang:1.21.3-alpine as builder
 
 ENV LIBRD_VER=2.3.0

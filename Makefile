@@ -74,7 +74,7 @@ consumer-image-run: consumer-image-stop
 ifneq (,$(wildcard $(ENVFILE)))
 	$(call load_env)
 endif
-	docker compose -f "docker-compose.yml" up
+	docker compose -f "docker-compose.yml" up --build
 
 #consumer-image-stop: @ Run a Docker image
 consumer-image-stop:
