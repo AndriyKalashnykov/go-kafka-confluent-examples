@@ -1,5 +1,9 @@
-# docker buildx build --platform linux/arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
-FROM golang:1.21.3-alpine as builder
+# docker buildx build --build-arg TARGETARCH=arm64 --platform linux/arm64 --file Dockerfile -t kafka-confluent-go-consumer:latest .
+
+FROM --platform=linux/$TARGETARCH golang:1.21.3-alpine as builder
+
+ARG TARGETARCH
+RUN echo $TARGETARCH
 
 # librdkafka package for alpine yet
 # https://pkgs.alpinelinux.org/packages?name=librdkafka-dev&branch=edge&repo=&arch=&maintainer=John%20Anthony
@@ -28,7 +32,7 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -tags musl --ldflags "-extldflags -static" -a -o consumer consumer/consumer.go
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags musl --ldflags "-extldflags -static" -a -o consumer consumer/consumer.go
 
 FROM alpine:3.18.4 as runtime
 COPY --from=builder /app/consumer /

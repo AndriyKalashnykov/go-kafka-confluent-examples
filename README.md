@@ -29,6 +29,13 @@ and deploy it to Kubernetes.
     ```bash
   ./scripts/install-osxcross-ubuntu.sh
   ```
+- [Build ARM Images on x86 Hosts] Optional
+  ```bash
+  sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-user-static binfmt-support
+  update-binfmts --enable qemu-arm
+  update-binfmts --display qemu-arm
+  docker buildx build --platform linux/arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
+  ```
   
 - [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)
   ```bash
