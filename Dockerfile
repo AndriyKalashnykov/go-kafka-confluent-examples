@@ -34,7 +34,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags musl --ldflags "-extldflags -static" -a -o consumer consumer/consumer.go
 
-FROM alpine:3.18.5 as runtime
+FROM alpine:3.19.0 as runtime
 COPY --from=builder /app/consumer /
 EXPOSE 8080
 CMD ["/bin/sh", "-c", "/consumer"]
