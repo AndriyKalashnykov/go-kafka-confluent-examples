@@ -7,7 +7,7 @@ RUN echo $TARGETARCH
 
 # librdkafka package for alpine yet
 # https://pkgs.alpinelinux.org/packages?name=librdkafka-dev&branch=edge&repo=&arch=&maintainer=John%20Anthony
-RUN apk add musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf
+RUN apk add mold musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf
 RUN apk add build-base coreutils make musl-dev rpm wget curl cyrus-sasl-dev libevent libsasl lz4-dev openssh openssl openssl-dev yajl-dev zlib-dev
 
 ENV LIBRD_VER=2.3.0
@@ -32,7 +32,7 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags musl --ldflags "-extldflags -static" -a -o consumer consumer/consumer.go
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o consumer consumer/consumer.go
 
 FROM alpine:3.19.0 as runtime
 COPY --from=builder /app/consumer /
