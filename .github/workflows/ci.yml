@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         name: [unit]
-        go-version: [1.21]
+        go-version: [1.22]
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        go-version: [1.21]
+        go-version: [1.22]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.os }})
@@ -68,7 +68,7 @@ jobs:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
-        go-version: [ 1.21 ]
+        go-version: [ 1.22 ]
         os: [ ubuntu-latest]
     needs: [ tests, staticcheck, builds ]
     runs-on:  ${{ matrix.os }}
@@ -93,7 +93,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.21
+          GOLANG_CROSS_VERSION: v1.22
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -110,7 +110,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.21
+          GOLANG_CROSS_VERSION: v1.22
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
