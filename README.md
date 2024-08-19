@@ -10,10 +10,10 @@ and deploy it to Kubernetes.
 ### Requirements
 
 - Linux (Ubuntu) or Mac OS
-- [gvm](https://github.com/moovweb/gvm) Go 1.22
+- [gvm](https://github.com/moovweb/gvm) Go 1.23
   ```bash
-  gvm install go1.22 --prefer-binary --with-build-tools --with-protobuf
-  gvm use go1.22 --default
+  gvm install go1.23 --prefer-binary --with-build-tools --with-protobuf
+  gvm use go1.23 --default
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional
 

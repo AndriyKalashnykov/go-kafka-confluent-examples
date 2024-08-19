@@ -5,7 +5,7 @@ GOFLAGS=-mod=mod
 GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
 OS ?= $(shell uname -s | tr A-Z a-z)
 ENVFILE=./.env
-GO_BUILDER_VERSION=v1.22
+GO_BUILDER_VERSION=v1.23
 OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 define load_env
