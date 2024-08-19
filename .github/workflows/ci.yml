@@ -13,20 +13,20 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.22
+          go-version: 1.23
           cache: true
       - uses: dominikh/staticcheck-action@v1.3.1
         with:
           version: "2023.1.6"
           install-go: false
-          cache-key: 1.22
+          cache-key: 1.23
 
   tests:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         name: [unit]
-        go-version: [1.22]
+        go-version: [1.23]
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        go-version: [1.22]
+        go-version: [1.23]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.os }})
@@ -74,7 +74,7 @@ jobs:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
-        go-version: [ 1.22 ]
+        go-version: [ 1.23 ]
         os: [ ubuntu-latest]
     needs: [ tests, staticcheck, builds ]
     runs-on:  ${{ matrix.os }}
@@ -99,7 +99,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -116,7 +116,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
