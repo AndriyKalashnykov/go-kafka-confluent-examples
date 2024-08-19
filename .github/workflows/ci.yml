@@ -99,7 +99,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.23
+          GOLANG_CROSS_VERSION: v1.22
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -116,7 +116,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.23
+          GOLANG_CROSS_VERSION: v1.22
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
