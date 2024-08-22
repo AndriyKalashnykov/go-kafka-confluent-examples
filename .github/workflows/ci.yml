@@ -8,14 +8,18 @@ jobs:
   staticcheck:
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: 1.23
           cache: true
-      - uses: dominikh/staticcheck-action@v1.3.1
+
+      - name: Static check
+        uses: dominikh/staticcheck-action@v1.3.1
         with:
           version: "2024.1"
           install-go: false
@@ -30,8 +34,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -99,7 +105,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -116,7 +122,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.22
+          GOLANG_CROSS_VERSION: v1.23
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:

@@ -1,6 +1,6 @@
 # docker buildx build --build-arg TARGETARCH=arm64 --platform linux/arm64 --file Dockerfile -t kafka-confluent-go-consumer:latest .
 
-FROM --platform=linux/$TARGETARCH golang:1.23.0-alpine as builder
+FROM --platform=linux/$TARGETARCH golang:1.23.0-alpine AS builder
 
 ARG TARGETARCH
 RUN echo $TARGETARCH
@@ -10,7 +10,7 @@ RUN echo $TARGETARCH
 RUN apk add mold musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf
 RUN apk add build-base coreutils make musl-dev rpm wget curl cyrus-sasl-dev libevent libsasl lz4-dev openssh openssl openssl-dev yajl-dev zlib-dev
 
-ENV LIBRD_VER=2.3.0
+#ENV LIBRD_VER=2.3.0
 # Install librdkafka $LIBRD_VER
 # https://gist.github.com/jaihind213/e82d41dc79f52cfa64ca32350bdb27df
 #RUN apk --no-cache add ca-certificates git gcc g++ libtool libc-dev musl-dev pkgconf
@@ -34,7 +34,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o consumer consumer/consumer.go
 
-FROM alpine:3.20.2 as runtime
+FROM alpine:3.20.2 AS runtime
 COPY --from=builder /app/consumer /
 EXPOSE 8080
 CMD ["/bin/sh", "-c", "/consumer"]
