@@ -1,5 +1,6 @@
 # docker buildx build --build-arg TARGETARCH=arm64 --platform linux/arm64 --file Dockerfile -t kafka-confluent-go-consumer:latest .
 
+# https://hub.docker.com/_/golang/tags
 FROM --platform=linux/$TARGETARCH golang:1.23.1-alpine AS builder
 
 ARG TARGETARCH
@@ -34,6 +35,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o consumer consumer/consumer.go
 
+# https://hub.docker.com/_/alpine/tags
 FROM alpine:3.20.3 AS runtime
 COPY --from=builder /app/consumer /
 EXPOSE 8080

@@ -67,7 +67,7 @@ version:
 
 #consumer-image-build: @ Build Consumer Docker image
 consumer-image-build: build
-	docker build -t ${CONSUMER_IMG} -f Dockerfile.consumer .
+	docker buildx build -t ${CONSUMER_IMG} -f Dockerfile.consumer .
 
 #consumer-image-run: @ Run a Docker image
 consumer-image-run: consumer-image-stop
