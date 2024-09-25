@@ -29,7 +29,7 @@ help:
 
 #clean: @ Cleanup
 clean:
-	@sudo rm -rf .bin/ dist/
+	@rm -rf .bin/ dist/
 
 #build: @ Build
 build: clean
