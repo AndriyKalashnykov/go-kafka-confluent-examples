@@ -42,8 +42,8 @@ test:
 
 #update: @ Update dependency packages to latest versions
 update:
-	@export GOPRIVATE=$(GOPRIVATE); export GOFLAGS=$(GOFLAGS); cd ./producer; go get -u; go mod tidy; cd ..
-	@export GOPRIVATE=$(GOPRIVATE); export GOFLAGS=$(GOFLAGS); cd ./consumer; go get -u; go mod tidy; cd ..
+	@export GOPRIVATE=$(GOPRIVATE); export GOFLAGS=$(GOFLAGS); cd ./producer; go get -u ./...; go mod tidy; cd ..
+	@export GOPRIVATE=$(GOPRIVATE); export GOFLAGS=$(GOFLAGS); cd ./consumer; go get -u ./...; go mod tidy; cd ..
 
 #get: @ Download and install dependency packages
 get:
