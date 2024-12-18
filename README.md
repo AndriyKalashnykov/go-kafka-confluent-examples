@@ -5,7 +5,7 @@
 # Confluent Kafka Cloud Go example
 
 This example shows how to create a [Confluent Kafka Cloud](https://confluent.cloud/) Producer/Consumer in Go
-and deploy it to Kubernetes.
+using [Confluent's Golang Client for Apache Kafka](https://github.com/confluentinc/confluent-kafka-go/) client and deploy it to Kubernetes.
 
 ### Requirements
 
