@@ -1,5 +1,5 @@
 [![CI](https://github.com/AndriyKalashnykov/go-kafka-confluent-examples/actions/workflows/ci.yml/badge.svg)](https://github.com/AndriyKalashnykov/go-kafka-confluent-examples/actions/workflows/ci.yml)
-[![Hits](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples.svg)](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples/)
+[![Hits](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples.svg?view=today-total&style=plastic)](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://app.renovatebot.com/dashboard#github/AndriyKalashnykov/go-kafka-confluent-examples)
 # Confluent Kafka Cloud Go example
