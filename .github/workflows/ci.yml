@@ -15,15 +15,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
-          go-version: 1.23
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Static check
         uses: dominikh/staticcheck-action@fe1dd0c3658873b46f8c9bb3291096a617310ca6 # v1.3.1
         with:
-          version: "2024.1"
+          version: "latest"
           install-go: false
-          cache-key: 1.23
+          cache-key: "latest"
 
   tests:
     strategy:
