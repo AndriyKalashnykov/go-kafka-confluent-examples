@@ -1,6 +1,6 @@
 # docker buildx build --platform linux/arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.24.2-alpine AS builder
+FROM golang:1.24.7-alpine@sha256:2bba76c152a3059724bac887e7a24749a0f9a62d49fe7dfa1bcae30ee877e109 AS builder
 
 # librdkafka package for alpine yet
 # https://pkgs.alpinelinux.org/packages?name=librdkafka-dev&branch=edge&repo=&arch=&maintainer=John%20Anthony
@@ -33,7 +33,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o consumer consumer/consumer.go
 
-FROM alpine:3.21.3 AS runtime
+FROM alpine:3.21.4@sha256:b6a6be0ff92ab6db8acd94f5d1b7a6c2f0f5d10ce3c24af348d333ac6da80685 AS runtime
 WORKDIR /
 RUN addgroup -g 1000 srvgroup && adduser -D srvuser -u 1000 -G srvgroup
 COPY --from=builder /app/consumer /
