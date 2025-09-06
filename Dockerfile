@@ -1,7 +1,7 @@
 # docker buildx build --build-arg TARGETARCH=arm64 --platform linux/arm64 --file Dockerfile -t kafka-confluent-go-consumer:latest .
 
 # https://hub.docker.com/_/golang/tags
-FROM --platform=linux/$TARGETARCH golang:1.25.1-alpine@sha256:cb0b8e92b8b63b1ba16ce78d926fcba5d4f9ff241855115568006affc3ae6557 AS builder
+FROM --platform=linux/$TARGETARCH golang:1.25.1-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd AS builder
 
 ARG TARGETARCH
 RUN echo $TARGETARCH
