@@ -1,6 +1,6 @@
 # docker buildx build --platform linux/arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.25.2-alpine@sha256:6104e2bbe9f6a07a009159692fe0df1a97b77f5b7409ad804b17d6916c635ae5 AS builder
+FROM golang:1.25.2-alpine@sha256:182059d7dae0e1dfe222037d14b586ebece3ebf9a873a0fe1cc32e53dbea04e0 AS builder
 
 # librdkafka package for alpine yet
 # https://pkgs.alpinelinux.org/packages?name=librdkafka-dev&branch=edge&repo=&arch=&maintainer=John%20Anthony
