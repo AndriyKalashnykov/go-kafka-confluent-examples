@@ -2,8 +2,27 @@ name: ci
 
 on:
   push:
+  pull_request:
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.go-version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      
+      - name: Extract Go version from go.mod
+        id: go-version
+        run: |
+          GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}' | cut -d. -f1,2)
+          echo "version=v${GO_VERSION}" >> $GITHUB_OUTPUT
 
   staticcheck:
     runs-on: ubuntu-latest
@@ -30,7 +49,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         name: [unit]
-        go-version: [1.23]
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
@@ -41,7 +59,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Create temporary .env
@@ -54,8 +72,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        go-version: [ 1.23 ]
-        os: [ubuntu-latest, macos-latest]
+        os: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.os }})
 
@@ -68,21 +85,21 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: 'go.mod'
+          cache: true
 
       - name: Create temporary .env
         run: touch .env
 
-      - name: Build [go${{ matrix.go-version }} - ${{ matrix.os }}]
+      - name: Build [${{ matrix.os }}]
         run: make build
 
   release-binaries:
     if: github.ref_type == 'tag'
     strategy:
       matrix:
-        go-version: [ 1.23 ]
         os: [ ubuntu-latest]
-    needs: [ tests, staticcheck, builds ]
+    needs: [ setup, tests, staticcheck, builds ]
     runs-on:  ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -105,7 +122,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.23
+          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -122,7 +139,7 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: v1.23
+          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
