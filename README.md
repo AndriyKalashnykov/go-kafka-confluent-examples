@@ -10,10 +10,10 @@ using [Confluent's Golang Client for Apache Kafka](https://github.com/confluenti
 ### Requirements
 
 - Linux (Ubuntu) or Mac OS
-- [gvm](https://github.com/moovweb/gvm) Go 1.24.2
+- [gvm](https://github.com/moovweb/gvm) Go
   ```bash
-  gvm install go1.24.2 --prefer-binary --with-build-tools --with-protobuf
-  gvm use go1.24.2 --default
+  gvm install go1.25.7 --prefer-binary --with-build-tools --with-protobuf
+  gvm use go1.25.7 --default
   ```
 - [Cross compilation on Ubuntu with CGO ] Optional
 
