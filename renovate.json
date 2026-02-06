@@ -2,14 +2,11 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    ":approveMajorUpdates",
     ":label(dependencies)",
     ":semanticCommitType(chore)",
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests",
     ":dependencyDashboard",
-    ":automergePatch",
-    ":automergePr",
     ":automergeRequireAllStatusChecks",
     ":prConcurrentLimitNone",
     ":separatePatchReleases",
@@ -19,49 +16,54 @@
   "postUpdateOptions": [
     "gomodTidy"
   ],
-  "commitMessagePrefix": "chore(all): ",
   "commitMessageAction": "update",
   "commitBody": "Signed-off-by: Renovate Bot <bot@renovateapp.com>",
   "platformAutomerge": true,
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
-  "groupName": "all",
   "labels": [
     "dependencies"
   ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "automerge": true,
+    "schedule": ["at any time"]
+  },
   "packageRules": [
     {
-      "description": "Automerge major updates",
-      "matchUpdateTypes": [
-        "major"
-      ],
+      "description": "Security updates - highest priority, immediate merge",
+      "matchUpdateTypes": ["security"],
+      "labels": ["security", "dependencies"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "schedule": ["at any time"],
+      "prPriority": 10
+    },
+    {
+      "description": "Go modules group",
+      "matchManagers": ["gomod"],
+      "groupName": "go-modules",
+      "commitMessagePrefix": "chore(go): ",
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
     },
     {
-      "description": "Automerge non-major updates",
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "digest",
-        "pin",
-        "pinDigest",
-        "internal",
-        "devDependencies",
-        "ref",
-        "none",
-        "security",
-        "grop",
-        "unpin"
-      ],
+      "description": "Docker images group",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "groupName": "docker",
+      "commitMessagePrefix": "chore(docker): ",
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
     },
     {
-      "description": "Automerge github-actions updates",
+      "description": "GitHub Actions group",
       "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "commitMessagePrefix": "chore(actions): ",
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
