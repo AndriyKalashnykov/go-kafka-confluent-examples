@@ -2,71 +2,29 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    ":label(dependencies)",
     ":semanticCommitType(chore)",
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests",
     ":dependencyDashboard",
-    ":automergeRequireAllStatusChecks",
-    ":prConcurrentLimitNone",
     ":separatePatchReleases",
     "replacements:all",
     "workarounds:all"
   ],
-  "postUpdateOptions": [
-    "gomodTidy"
-  ],
+  "postUpdateOptions": ["gomodTidy"],
+  "commitMessagePrefix": "chore(all): ",
   "commitMessageAction": "update",
   "commitBody": "Signed-off-by: Renovate Bot <bot@renovateapp.com>",
-  "platformAutomerge": true,
-  "prConcurrentLimit": 0,
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
-  "labels": [
-    "dependencies"
-  ],
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"],
-    "automerge": true,
-    "schedule": ["at any time"]
-  },
+  "platformAutomerge": true,
+  "automerge": true,
+  "automergeType": "pr",
   "packageRules": [
     {
-      "description": "Security updates - highest priority, immediate merge",
-      "matchUpdateTypes": ["security"],
-      "labels": ["security", "dependencies"],
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true,
-      "schedule": ["at any time"],
-      "prPriority": 10
-    },
-    {
-      "description": "Go modules group",
-      "matchManagers": ["gomod"],
-      "groupName": "go-modules",
-      "commitMessagePrefix": "chore(go): ",
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true
-    },
-    {
-      "description": "Docker images group",
-      "matchManagers": ["dockerfile", "docker-compose"],
-      "groupName": "docker",
-      "commitMessagePrefix": "chore(docker): ",
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true
-    },
-    {
-      "description": "GitHub Actions group",
-      "matchManagers": ["github-actions"],
-      "groupName": "github-actions",
-      "commitMessagePrefix": "chore(actions): ",
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true
+      "description": "Automerge all updates when checks pass",
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
+      "automerge": true
     }
   ]
 }
