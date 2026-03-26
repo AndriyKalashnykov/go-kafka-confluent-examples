@@ -1,4 +1,4 @@
-CONSUMER_IMG ?= kafka-confluent-go-consumer:latest
+CONSUMER_IMG ?= kafka-confluent-go-consumer:v0.0.61
 CURRENTTAG:=$(shell git describe --tags --abbrev=0)
 NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
@@ -19,6 +19,11 @@ endif
 
 .DEFAULT_GOAL := help
 
+.PHONY: help clean build test update get release version deps lint ci \
+	consumer-image-build consumer-image-run consumer-image-stop \
+	kafka-run-producer kafka-run-consumer test-release \
+	k8s-deploy k8s-undeploy
+
 #help: @ List available tasks
 help:
 	@clear
@@ -26,6 +31,12 @@ help:
 	@echo "Commands :"
 	@grep -E '[a-zA-Z\.\-]+:.*?@ .*$$' $(MAKEFILE_LIST)| tr -d '#' | awk 'BEGIN {FS = ":.*?@ "}; {printf "\033[32m%-20s\033[0m - %s\n", $$1, $$2}'
 
+#deps: @ Check required dependencies
+deps:
+	@command -v go >/dev/null 2>&1 || { echo "go is not installed"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo "docker is not installed"; exit 1; }
+	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl is not installed"; exit 1; }
+	@command -v git >/dev/null 2>&1 || { echo "git is not installed"; exit 1; }
 
 #clean: @ Cleanup
 clean:
@@ -38,7 +49,15 @@ build: clean
 
 #test: @ Run tests
 test:
-	@export export GOFLAGS=$(GOFLAGS); go test ./...
+	@export GOFLAGS=$(GOFLAGS); go test ./...
+
+#lint: @ Run linters
+lint:
+	@command -v staticcheck >/dev/null 2>&1 || { echo "staticcheck is not installed: go install honnef.co/go/tools/cmd/staticcheck@latest"; exit 1; }
+	@staticcheck ./...
+
+#ci: @ Run all CI checks (lint, test, build)
+ci: lint test build
 
 #update: @ Update dependency packages to latest versions
 update:
@@ -52,6 +71,10 @@ get:
 #release: @ Create and push a new tag
 release:
 	$(eval NT=$(NEWTAG))
+	@if ! echo "$(NT)" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+		echo "Error: tag '$(NT)' is not valid semver (expected vMAJOR.MINOR.PATCH)"; \
+		exit 1; \
+	fi
 	@echo -n "Are you sure to create and push ${NT} tag? [y/N] " && read ans && [ $${ans:-N} = y ]
 	@echo ${NT} > ./version.txt
 	@git add -A
@@ -67,44 +90,45 @@ version:
 
 #consumer-image-build: @ Build Consumer Docker image
 consumer-image-build: build
-	docker buildx build --load -t ${CONSUMER_IMG} -f Dockerfile.consumer .
+	@docker buildx build --load -t ${CONSUMER_IMG} -f Dockerfile.consumer .
 
 #consumer-image-run: @ Run a Docker image
 consumer-image-run: consumer-image-stop
 ifneq (,$(wildcard $(ENVFILE)))
 	$(call load_env)
 endif
-	docker compose -f "docker-compose.yml" up --build
+	@docker compose -f "docker-compose.yml" up --build
 
 #consumer-image-stop: @ Run a Docker image
 consumer-image-stop:
-	docker compose -f "docker-compose.yml" down
+	@docker compose -f "docker-compose.yml" down
 
-#runp: @ Run producer
-runp: build
+#kafka-run-producer: @ Run producer
+kafka-run-producer: build
 ifneq (,$(wildcard $(ENVFILE)))
 	$(call load_env)
 endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/producer
 
-#runc: @ Run consumer
-runc: build
+#kafka-run-consumer: @ Run consumer
+kafka-run-consumer: build
 ifneq (,$(wildcard $(ENVFILE)))
 	$(call load_env)
 endif
 #	@echo ${KAFKA_CONFIG_FILE}
 	@.bin/consumer
 
+#test-release: @ Test release build locally
 test-release: clean
-	docker run --rm --privileged \
+	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
 		-w /golang-cross-example \
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Linux.yml
 
-	docker run --rm --privileged \
+	@docker run --rm --privileged \
 		-v $(CURDIR):/golang-cross-example \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH)/src:/go/src \
