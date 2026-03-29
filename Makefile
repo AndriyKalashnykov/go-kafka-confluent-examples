@@ -22,7 +22,8 @@ endif
 .PHONY: help clean build test update get release version deps lint ci \
 	consumer-image-build consumer-image-run consumer-image-stop \
 	kafka-run-producer kafka-run-consumer test-release \
-	k8s-deploy k8s-undeploy
+	k8s-deploy k8s-undeploy \
+	renovate-bootstrap renovate-validate
 
 #help: @ List available tasks
 help:
@@ -168,3 +169,19 @@ k8s-undeploy:
 # docker pull --platform=linux/amd64 ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.19
 # docker pull --platform=linux/arm64 ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.19
 # docker inspect ded258717010 | jq .[].Architecture
+
+NVM_VERSION := 0.40.4
+
+#renovate-bootstrap: @ Install nvm and npm for Renovate
+renovate-bootstrap:
+	@command -v node >/dev/null 2>&1 || { \
+		echo "Installing nvm $(NVM_VERSION)..."; \
+		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
+		export NVM_DIR="$$HOME/.nvm"; \
+		[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
+		nvm install --lts; \
+	}
+
+#renovate-validate: @ Validate Renovate configuration
+renovate-validate: renovate-bootstrap
+	@npx --yes renovate --platform=local
