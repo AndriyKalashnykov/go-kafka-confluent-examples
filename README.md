@@ -2,53 +2,94 @@
 [![Hits](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples.svg?view=today-total&style=plastic)](https://hits.sh/github.com/AndriyKalashnykov/go-kafka-confluent-examples/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://app.renovatebot.com/dashboard#github/AndriyKalashnykov/go-kafka-confluent-examples)
-# Confluent Kafka Cloud Go example
 
-This example shows how to create a [Confluent Kafka Cloud](https://confluent.cloud/) Producer/Consumer in Go
-using [Confluent's Golang Client for Apache Kafka](https://github.com/confluentinc/confluent-kafka-go/) client and deploy it to Kubernetes.
+# Confluent Kafka Cloud Go Example
 
-### Requirements
+Go-based [Confluent Kafka Cloud](https://confluent.cloud/) producer/consumer examples using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client, with Kubernetes deployment support and Docker containerization.
 
-- Linux (Ubuntu) or Mac OS
-- [gvm](https://github.com/moovweb/gvm) Go
-  ```bash
-  gvm install go1.26.0 --prefer-binary --with-build-tools --with-protobuf
-  gvm use go1.26.0 --default
-  ```
-- [Cross compilation on Ubuntu with CGO ] Optional
+## Quick Start
 
-  Install [LLVM Compiler Infrastructure, release 17](https://llvm.org/)
-  ```
-  ./scripts/install-clang-17-ubuntu.sh
-  ```
-  Install libraries for cross compilation (Windows, etc.)
-  ```
-  ./scripts/install-cross-libs-ubuntu.sh
-  ```
-  Install [osxcross](https://github.com/tpoechtrager/osxcross) for MacOS cross compilation
-    ```bash
-  ./scripts/install-osxcross-ubuntu.sh
-  ```
-- [Build ARM Images on x86 Hosts] Optional
-  ```bash
-  sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-user-static binfmt-support
-  update-binfmts --enable qemu-arm
-  update-binfmts --display qemu-arm
-  docker buildx build --platform linux/arm64 --file Dockerfile.consumer -t kafka-confluent-go-consumer:latest .
-  ```
-  
-- [Confluent Kafka CLI and tools](https://confluent.cloud/environments/env-pr7kdm/clusters/lkc-v1007n/integrations/cli)
-  ```bash
-  curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest
-  confluent update
-  # log in to a Confluent Cloud organization
-  confluent login --save
-  ```
-- [docker](https://docs.docker.com/engine/install/) Optional
-- [GoReleaser](https://goreleaser.com/install/) Optional
-- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) Optional
+```bash
+make deps                  # verify required tools are installed
+make build                 # build producer and consumer binaries
+make test                  # run tests
+make kafka-run-producer    # build and run producer
+make kafka-run-consumer    # build and run consumer
+```
 
-## Configure Confluent Kafka Go client
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [GNU Make](https://www.gnu.org/software/make/) | 3.81+ | Build orchestration |
+| [Go](https://go.dev/dl/) | 1.26+ | Language runtime and compiler |
+| [gvm](https://github.com/moovweb/gvm) | latest | Go version management (optional) |
+| [Docker](https://www.docker.com/) | latest | Container builds and Compose |
+| [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment (optional) |
+| [Git](https://git-scm.com/) | latest | Version control |
+
+Install all required dependencies:
+
+```bash
+make deps
+```
+
+## Available Make Targets
+
+Run `make help` to see all available targets.
+
+### Build & Run
+
+| Target | Description |
+|--------|-------------|
+| `make build` | Build producer and consumer binaries |
+| `make test` | Run tests |
+| `make lint` | Run linters (golangci-lint + hadolint) |
+| `make clean` | Cleanup build artifacts |
+| `make kafka-run-producer` | Run producer |
+| `make kafka-run-consumer` | Run consumer |
+
+### Dependencies
+
+| Target | Description |
+|--------|-------------|
+| `make deps` | Install and verify required dependencies |
+| `make deps-check` | Show required Go versions and gvm status |
+| `make get` | Download and install dependency packages |
+| `make update` | Update dependency packages to latest versions |
+
+### Docker
+
+| Target | Description |
+|--------|-------------|
+| `make consumer-image-build` | Build Consumer Docker image |
+| `make consumer-image-run` | Run Consumer Docker image via Compose |
+| `make consumer-image-stop` | Stop Consumer Docker image |
+
+### Kubernetes
+
+| Target | Description |
+|--------|-------------|
+| `make k8s-deploy` | Deploy to Kubernetes |
+| `make k8s-undeploy` | Undeploy from Kubernetes |
+
+### CI
+
+| Target | Description |
+|--------|-------------|
+| `make ci` | Run all CI checks (lint, test, build) |
+| `make ci-run` | Run GitHub Actions workflow locally using [act](https://github.com/nektos/act) |
+
+### Release & Utilities
+
+| Target | Description |
+|--------|-------------|
+| `make release` | Create and push a new tag |
+| `make version` | Print current version (tag) |
+| `make test-release` | Test release build locally |
+| `make renovate-validate` | Validate Renovate configuration |
+
+## Configure Confluent Kafka Go Client
 
 Following steps are required.
 
@@ -87,7 +128,7 @@ Following steps are required.
   confluent api-key use $CONFLUENT_API_KEY --resource $CONFLUENT_CLUSTER
   ```
 
-- Export Confluent Kafka Cluster Bootstrap Server - `Cluster settings -> Endpoints -> Bootstrap server`, create 
+- Export Confluent Kafka Cluster Bootstrap Server - `Cluster settings -> Endpoints -> Bootstrap server`, create
   kafka.properties from the template and add it to the git repository.
   ```bash
   xdg-open https://confluent.cloud/environments/$CONFLUENT_ENV/clusters/$CONFLUENT_CLUSTER/settings/kafka
@@ -103,7 +144,7 @@ Following steps are required.
   confluent kafka topic create test-topic
   ```
 
-## Test Confluent Kafka topic
+## Test Confluent Kafka Topic
 
 ```bash
 confluent kafka topic list
@@ -129,35 +170,26 @@ and then run
 make k8s-deploy
 ```
 
-## Run Confluent Kafka Consumer Docker image locally
+## Run Confluent Kafka Consumer Docker Image Locally
 
 ```bash
 make consumer-image-run
 ```
 
-## Run Confluent Kafka Producer locally
+## Run Confluent Kafka Producer Locally
 
 ```bash
-make runp
+make kafka-run-producer
 ```
 
-## Help
+## CI/CD
 
-```text
-Commands :
-help                 - List available tasks
-clean                - Cleanup
-build                - Build
-test                 - Run tests
-update               - Update dependency packages to latest versions
-get                  - Download and install dependency packages
-release              - Create and push a new tag
-version              - Print current version(tag)
-consumer-image-build - Build Consumer Docker image
-consumer-image-run   - Run a Docker image
-consumer-image-stop  - Run a Docker image
-runp                 - Run producer
-runc                 - Run consumer
-k8s-deploy           - Deploy to Kubernetes
-k8s-undeploy         - Undeploy from Kubernetes
-```
+GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
+
+| Job | Triggers | Steps |
+|-----|----------|-------|
+| **ci** | push, PR, tags | Lint, Test, Build (matrix: ubuntu + macos) |
+| **release-binaries** | tags only | GoReleaser cross-compilation (Linux + macOS) |
+| **release-docker-images** | tags only | Docker build and push to ghcr.io |
+
+[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with platform automerge enabled.

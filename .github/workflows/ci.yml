@@ -15,108 +15,52 @@ permissions:
 
 jobs:
 
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      go-version: ${{ steps.go-version.outputs.version }}
+  ci:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    name: ci (${{ matrix.os }})
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Create temporary .env
+        run: touch .env
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
+
+  release-binaries:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ci]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
 
       - name: Extract Go version from go.mod
         id: go-version
         run: |
           GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}' | cut -d. -f1,2)
           echo "version=v${GO_VERSION}" >> $GITHUB_OUTPUT
-
-  staticcheck:
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Set up Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Static check
-        uses: dominikh/staticcheck-action@9716614d4101e79b4340dd97b10e54d68234e431 # v1.4.1
-        with:
-          version: "latest"
-          install-go: false
-          cache-key: "latest"
-
-  tests:
-    needs: [ setup, staticcheck ]
-    timeout-minutes: 20
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        name: [unit]
-    runs-on: ${{ matrix.os }}
-    name: test (${{ matrix.name }}, ${{ matrix.os }})
-    steps:
-
-      - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Set up Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Create temporary .env
-        run: touch .env
-
-      - name: Run [${{ matrix.name }} - ${{ matrix.os }}] tests
-        run: make test
-
-  builds:
-    needs: [ setup, staticcheck ]
-    timeout-minutes: 20
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-    runs-on: ${{ matrix.os }}
-    name: build (${{ matrix.os }})
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Create temporary .env
-        run: touch .env
-
-      - name: Build [${{ matrix.os }}]
-        run: make build
-
-  release-binaries:
-    if: github.ref_type == 'tag'
-    needs: [ setup, tests, staticcheck, builds ]
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        os: [ ubuntu-latest]
-    runs-on:  ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
 
       - name: Run GoReleaser Linux
         run: |
@@ -132,7 +76,7 @@ jobs:
           		--clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
+          GOLANG_CROSS_VERSION: ${{ steps.go-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser MacOS
@@ -149,12 +93,12 @@ jobs:
           		--clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
-          GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
+          GOLANG_CROSS_VERSION: ${{ steps.go-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-docker-images:
-    if: github.ref_type == 'tag'
-    needs: [tests, staticcheck, builds]
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ci]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -182,11 +126,6 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GH_ACCESS_TOKEN }}
 
-    - name: GitHub Tag Name example
-      run: |
-        echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-        echo "Tag name from github.ref_name: ${{  github.ref_name }}"
-
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
@@ -194,10 +133,9 @@ jobs:
         images: ghcr.io/${{ env.OWNER_LC }}/kafka-confluent-go-consumer
         flavor: latest=true
         tags: |
-          type=ref,event=branch
-          type=ref,event=tag
-          type=ref,event=pr
           type=semver,pattern=v{{version}}
+          type=semver,pattern=v{{major}}.{{minor}}
+          type=semver,pattern=v{{major}}
         labels: |
           org.opencontainers.image.vendor=Andriy Kalashnykov - andriykalashnykov@gmail.com
           org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go

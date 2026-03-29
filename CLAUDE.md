@@ -12,6 +12,7 @@ Go-based Confluent Kafka Cloud producer/consumer examples using the [confluent-k
 - **Container**: Docker, Docker Compose
 - **Orchestration**: Kubernetes
 - **CI/CD**: GitHub Actions
+- **Linting**: golangci-lint, hadolint
 - **Dependency Management**: Renovate
 
 ## Project Structure
@@ -32,10 +33,12 @@ tmpl/              - Template files (.env, kafka.properties, k8s secrets)
 make help          # List all available targets
 make build         # Build producer and consumer binaries (output: .bin/)
 make test          # Run tests
-make lint          # Run staticcheck linter
+make lint          # Run golangci-lint and hadolint
 make ci            # Run all CI checks (lint, test, build)
+make ci-run        # Run GitHub Actions workflow locally via act
 make clean         # Remove build artifacts
-make deps          # Verify required tools are installed
+make deps          # Install and verify required tools
+make deps-check    # Show required Go versions and gvm status
 ```
 
 ### Environment
@@ -68,8 +71,15 @@ make k8s-undeploy          # Remove from Kubernetes
 
 ## CI/CD
 
-- **ci.yml**: Runs on push to main and PRs. Jobs: setup, staticcheck, tests (matrix: ubuntu/macos), builds (matrix: ubuntu/macos), release-binaries (on tags), release-docker-images (on tags).
-- **cleanup-runs.yml**: Weekly cleanup of old workflow runs (retains 7 days, keeps minimum 5 runs).
+GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
+
+| Job | Triggers | Steps |
+|-----|----------|-------|
+| **ci** | push, PR, tags | Lint, Test, Build (matrix: ubuntu + macos) |
+| **release-binaries** | tags only | GoReleaser cross-compilation (Linux + macOS) |
+| **release-docker-images** | tags only | Docker build and push to ghcr.io |
+
+Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs).
 
 ## Code Conventions
 
@@ -77,6 +87,8 @@ make k8s-undeploy          # Remove from Kubernetes
 - `GOPRIVATE` set to this repository
 - Binary output directory: `.bin/`
 - Use `make ci` to validate changes locally before pushing
+- Use gvm for local Go version management; CI uses `actions/setup-go` with `go-version-file: go.mod`
+- Tool versions pinned in Makefile (GOLANGCI_VERSION, ACT_VERSION, HADOLINT_VERSION)
 
 ## Skills
 
