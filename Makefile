@@ -10,7 +10,7 @@ OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 # === Tool Versions (pinned) ===
 GOLANGCI_VERSION := 2.1.6
-ACT_VERSION      := 0.2.78
+ACT_VERSION      := 0.2.87
 HADOLINT_VERSION := 2.12.0
 NVM_VERSION      := 0.40.4
 
