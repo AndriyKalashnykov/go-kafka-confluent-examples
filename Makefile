@@ -1,11 +1,11 @@
 CONSUMER_IMG ?= kafka-confluent-go-consumer:v0.0.61
 CURRENTTAG:=$(shell git describe --tags --abbrev=0)
-NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (currnet tag - ${CURRENTTAG}): " newtag; echo $$newtag')
+NEWTAG ?= $(shell bash -c 'read -p "Please provide a new tag (current tag - ${CURRENTTAG}): " newtag; echo $$newtag')
 GOFLAGS=-mod=mod
 GOPRIVATE=github.com/AndriyKalashnykov/go-kafka-confluent-examples
 OS ?= $(shell uname -s | tr A-Z a-z)
 ENVFILE=./.env
-GO_BUILDER_VERSION=v1.24
+GO_BUILDER_VERSION=v$(GO_VERSION)
 OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 # === Tool Versions (pinned) ===

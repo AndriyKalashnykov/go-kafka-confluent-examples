@@ -39,5 +39,4 @@ RUN addgroup -g 1000 srvgroup && adduser -D srvuser -u 1000 -G srvgroup
 COPY --from=builder /app/consumer /
 USER srvuser:srvgroup
 EXPOSE 8080
-CMD ["/bin/sh", "-c", "/consumer"]
 ENTRYPOINT [ "./consumer" ]
