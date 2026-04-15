@@ -24,7 +24,9 @@ func TestReadEnvVar(t *testing.T) {
 			if tt.setEnv {
 				t.Setenv(tt.key, tt.envVal)
 			} else {
-				os.Unsetenv(tt.key)
+				if err := os.Unsetenv(tt.key); err != nil {
+					t.Fatalf("Unsetenv(%q): %v", tt.key, err)
+				}
 			}
 			if got := ReadEnvVar(tt.key); got != tt.wantVal {
 				t.Errorf("ReadEnvVar(%q) = %q, want %q", tt.key, got, tt.wantVal)
