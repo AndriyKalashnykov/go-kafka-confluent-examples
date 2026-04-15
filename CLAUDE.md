@@ -83,10 +83,11 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `static-check` | push, PR | `make static-check` composite |
 | `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
 | `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
+| `e2e-compose` | push, PR | `make e2e-compose` (Docker Compose + PLAINTEXT broker; ubuntu-latest) |
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Branch-protection aggregator |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | tags only | Build + Trivy scan + smoke test + push to ghcr.io + cosign sign |
+| `docker` | tags only | Multi-arch build (`linux/amd64,linux/arm64`) + Trivy scan + smoke test + push to ghcr.io + cosign sign |
 
 Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs).
 
@@ -101,8 +102,7 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 
 ## Upgrade Backlog
 
-- [ ] **Multi-arch Docker image** (`linux/arm64`) — requires CGO cross-compilation for `librdkafka` (cross-gcc, arm64 musl-dev, QEMU emulation). Non-trivial for CGO projects. Currently single-arch (`linux/amd64`). Other hardening gates (Trivy image scan, smoke test, cosign keyless signing) already applied in the `docker` job.
-- [ ] **E2E tests** — Docker Compose flow (`make e2e-compose` with a Kafka broker sidecar + SASL-free test fixture) and KinD flow (`make e2e` with a Kafka StatefulSet) are deferred — need to add a broker to `docker-compose.yml` or a KinD-deployable Kafka manifest.
+- [ ] **KinD E2E flow** — `make e2e-compose` covers the Docker Compose path (PLAINTEXT broker + consumer on a shared network, real produce → consume round-trip). A KinD flow with a Kafka StatefulSet and the real `k8s/*.yaml` manifests is still deferred; it would add cluster wiring coverage (Service/LoadBalancer, ConfigMap/Secret mounts, readiness probes) beyond what compose exercises.
 
 ## Skills
 

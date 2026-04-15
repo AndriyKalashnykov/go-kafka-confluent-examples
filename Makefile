@@ -312,6 +312,10 @@ test-release: clean
 		-w /golang-cross-example \
 		ghcr.io/gythialy/golang-cross:$(GO_BUILDER_VERSION) --skip=publish --clean --snapshot --config .goreleaser-Darwin-cross.yml
 
+#e2e-compose: @ Run E2E via Docker Compose (PLAINTEXT Kafka broker + consumer, no SASL)
+e2e-compose:
+	@./e2e/e2e-compose-test.sh
+
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:
 	@test -f ./k8s/cm.yaml || { echo "Error: k8s/cm.yaml missing. Generate with: kubectl create configmap kafka-config --from-file kafka.properties -o yaml --dry-run=client > ./k8s/cm.yaml"; exit 1; }
@@ -342,7 +346,7 @@ renovate-validate: deps
 
 .PHONY: help deps deps-check deps-act deps-hadolint deps-govulncheck deps-gosec deps-gitleaks deps-actionlint deps-shellcheck deps-trivy \
 	clean format format-check deps-prune deps-prune-check \
-	lint vulncheck sec secrets lint-ci trivy-fs mermaid-lint static-check test integration-test build ci ci-run \
+	lint vulncheck sec secrets lint-ci trivy-fs mermaid-lint static-check test integration-test e2e-compose build ci ci-run \
 	update get release version \
 	consumer-image-build consumer-image-run consumer-image-stop \
 	kafka-run-producer kafka-run-consumer test-release \

@@ -1,0 +1,60 @@
+# E2E fixture: Apache Kafka in KRaft mode (PLAINTEXT, no SASL) + the
+# consumer image built from Dockerfile.consumer. A test harness produces
+# messages via kafka-console-producer.sh inside the broker container and
+# asserts the consumer logs "Consumed event from topic e2e-topic" 5 times.
+#
+# Not for production: advertised listener is hardcoded to "kafka:9092"
+# (the service DNS name on the compose network), and replication factors
+# are 1. See e2e/e2e-compose-test.sh for the harness.
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: e2e-kafka
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks:
+      - e2e_net
+
+  consumer:
+    image: kafka-confluent-go-consumer:e2e
+    container_name: e2e-consumer
+    build:
+      dockerfile: Dockerfile.consumer
+      context: ..
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CONFIG_FILE: /kafka.properties
+      KAFKA_TOPIC: e2e-topic
+      # librdkafka ignores SASL settings when security.protocol=PLAINTEXT,
+      # but consumer/main.go sets them unconditionally — provide non-empty
+      # placeholders so SetKey doesn't reject empty strings.
+      SASL_USERNAME: unused
+      SASL_PASSWORD: unused
+    volumes:
+      - ./kafka.properties:/kafka.properties:ro
+    networks:
+      - e2e_net
+
+networks:
+  e2e_net:
+    driver: bridge
