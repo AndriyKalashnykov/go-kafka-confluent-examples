@@ -27,6 +27,8 @@ GITLEAKS_VERSION := 8.29.0
 ACTIONLINT_VERSION := 1.7.7
 # renovate: datasource=github-releases depName=aquasecurity/trivy
 TRIVY_VERSION    := 0.60.0
+# renovate: datasource=github-releases depName=koalaman/shellcheck
+SHELLCHECK_VERSION := 0.10.0
 
 # Parse Go version from root go.mod (used for release docker builder image tag)
 GO_VERSION  := $(shell grep -oP '^go \K[0-9.]+' go.mod)
@@ -117,6 +119,25 @@ deps-actionlint: deps
 	@command -v actionlint >/dev/null 2>&1 || { echo "Installing actionlint $(ACTIONLINT_VERSION)..."; \
 		go install github.com/rhysd/actionlint/cmd/actionlint@v$(ACTIONLINT_VERSION); }
 
+#deps-shellcheck: @ Install shellcheck (required for actionlint shell-script linting)
+deps-shellcheck: deps
+	@command -v shellcheck >/dev/null 2>&1 || { \
+		OS_NAME=$$(uname -s | tr A-Z a-z); \
+		ARCH=$$(uname -m); \
+		mkdir -p $(HOME)/.local/bin; \
+		echo "Installing shellcheck $(SHELLCHECK_VERSION)..."; \
+		curl -sSfL -o /tmp/shellcheck.tar.xz "https://github.com/koalaman/shellcheck/releases/download/v$(SHELLCHECK_VERSION)/shellcheck-v$(SHELLCHECK_VERSION).$${OS_NAME}.$${ARCH}.tar.xz" && \
+		tar -xJf /tmp/shellcheck.tar.xz -C /tmp && \
+		install -m 755 /tmp/shellcheck-v$(SHELLCHECK_VERSION)/shellcheck $(HOME)/.local/bin/shellcheck && \
+		rm -rf /tmp/shellcheck-v$(SHELLCHECK_VERSION) /tmp/shellcheck.tar.xz; \
+	}
+
+#deps-trivy: @ Install Trivy for security scanning
+deps-trivy: deps
+	@command -v trivy >/dev/null 2>&1 || { echo "Installing trivy $(TRIVY_VERSION)..."; \
+		mkdir -p $(HOME)/.local/bin; \
+		curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(HOME)/.local/bin v$(TRIVY_VERSION); }
+
 #clean: @ Cleanup
 clean:
 	@rm -rf .bin/ dist/
@@ -146,7 +167,7 @@ deps-prune-check: deps
 #lint: @ Run golangci-lint + hadolint
 lint: deps deps-hadolint
 	@export CGO_ENABLED=1 && golangci-lint run ./...
-	@command -v hadolint >/dev/null 2>&1 && hadolint Dockerfile Dockerfile.consumer || true
+	@command -v hadolint >/dev/null 2>&1 && hadolint Dockerfile.consumer || true
 
 #vulncheck: @ Run govulncheck
 vulncheck: deps-govulncheck
@@ -161,11 +182,15 @@ secrets: deps-gitleaks
 	@gitleaks detect --no-banner --source .
 
 #lint-ci: @ Run actionlint on GitHub workflows
-lint-ci: deps-actionlint
+lint-ci: deps-actionlint deps-shellcheck
 	@actionlint
 
-#static-check: @ Composite quality gate (lint + sec + vulncheck + secrets + lint-ci)
-static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets
+#trivy-fs: @ Trivy filesystem scan (secrets + misconfigs; Go CVEs handled by govulncheck)
+trivy-fs: deps-trivy
+	@trivy fs --scanners secret,misconfig --severity CRITICAL,HIGH --exit-code 1 .
+
+#static-check: @ Composite quality gate (lint + sec + vulncheck + secrets + lint-ci + trivy-fs)
+static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs
 
 #test: @ Run tests
 test: deps
@@ -260,11 +285,13 @@ test-release: clean
 
 #k8s-deploy: @ Deploy to Kubernetes
 k8s-deploy:
-	@cat ./k8s/ns.yaml | kubectl apply -f - && \
-	cat ./k8s/cm.yaml | kubectl apply --namespace=kafka-confluent-examples -f - && \
-	cat ./k8s/sc.yaml | kubectl apply --namespace=kafka-confluent-examples -f - && \
-	cat ./k8s/deployment.yaml | kubectl apply --namespace=kafka-confluent-examples -f - && \
-	cat ./k8s/service.yaml | kubectl apply --namespace=kafka-confluent-examples -f -
+	@test -f ./k8s/cm.yaml || { echo "Error: k8s/cm.yaml missing. Generate with: kubectl create configmap kafka-config --from-file kafka.properties -o yaml --dry-run=client > ./k8s/cm.yaml"; exit 1; }
+	@test -f ./k8s/sc.yaml || { echo "Error: k8s/sc.yaml missing. Generate from tmpl/sc.yaml.tmpl (see README)"; exit 1; }
+	@kubectl apply -f ./k8s/ns.yaml
+	@kubectl apply --namespace=kafka-confluent-examples -f ./k8s/cm.yaml
+	@kubectl apply --namespace=kafka-confluent-examples -f ./k8s/sc.yaml
+	@kubectl apply --namespace=kafka-confluent-examples -f ./k8s/deployment.yaml
+	@kubectl apply --namespace=kafka-confluent-examples -f ./k8s/service.yaml
 
 #k8s-undeploy: @ Undeploy from Kubernetes
 k8s-undeploy:
@@ -284,9 +311,9 @@ renovate-validate: deps
 		npx --yes renovate --platform=local; \
 	fi
 
-.PHONY: help deps deps-check deps-act deps-hadolint deps-govulncheck deps-gosec deps-gitleaks deps-actionlint \
+.PHONY: help deps deps-check deps-act deps-hadolint deps-govulncheck deps-gosec deps-gitleaks deps-actionlint deps-shellcheck deps-trivy \
 	clean format format-check deps-prune deps-prune-check \
-	lint vulncheck sec secrets lint-ci static-check test build ci ci-run \
+	lint vulncheck sec secrets lint-ci trivy-fs static-check test build ci ci-run \
 	update get release version \
 	consumer-image-build consumer-image-run consumer-image-stop \
 	kafka-run-producer kafka-run-consumer test-release \

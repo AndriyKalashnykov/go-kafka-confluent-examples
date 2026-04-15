@@ -13,7 +13,7 @@ Go-based Confluent Kafka Cloud producer/consumer examples using the [confluent-k
 - **Orchestration**: Kubernetes
 - **CI/CD**: GitHub Actions
 - **Version manager**: mise (`.mise.toml`, `.nvmrc`)
-- **Static analysis**: golangci-lint, gosec, govulncheck, gitleaks, actionlint, hadolint
+- **Static analysis**: golangci-lint, gosec, govulncheck, gitleaks, actionlint, shellcheck, hadolint, trivy (filesystem + K8s misconfigs)
 - **Dependency Management**: Renovate
 
 ## Project Structure
@@ -94,15 +94,13 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 - Binary output directory: `.bin/`
 - Use `make ci` to validate changes locally before pushing
 - mise manages the Go + Node toolchain (`.mise.toml`, `.nvmrc`); CI uses `actions/setup-go` with `go-version-file: go.mod`
-- Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `TRIVY_VERSION`) with `# renovate:` inline comments
+- Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `SHELLCHECK_VERSION`, `TRIVY_VERSION`) with `# renovate:` inline comments
 
 ## Upgrade Backlog
 
-- [ ] **Docker image hardening** — add Trivy fs + image scans, cosign keyless signing, SBOM generation, multi-arch (`linux/arm64`), smoke test between build and push. Run `/harden-image-pipeline` to apply interactively.
+- [ ] **Docker image hardening** — add Trivy image scan (pre-push), cosign keyless signing, SBOM generation, multi-arch (`linux/arm64`), smoke test between build and push. Run `/harden-image-pipeline` to apply interactively. (Trivy filesystem + K8s misconfig scans already wired via `make trivy-fs`.)
 - [ ] **Integration + e2e test coverage** — zero `*_test.go` files exist. Add Testcontainers-backed Kafka producer→consumer round-trip (integration), Docker Compose + KinD flows (e2e), and Makefile targets `integration-test` / `e2e` / `e2e-compose`. Run `/test-coverage-analysis` to generate stubs.
-- [ ] **Consolidate Dockerfile and Dockerfile.consumer** — two divergent Dockerfiles with different `USER` and `TARGETARCH` handling.
-- [ ] **Refactor producer/consumer `main()` into testable `Run(ctx, cfg)` functions** in `internal/` tree.
-- [ ] **Verify `k8s/cm.yaml` and `k8s/sc.yaml`** — referenced by `make k8s-deploy` but may not be committed (generated from templates).
+- [ ] **Refactor producer/consumer `main()` into testable `Run(ctx, cfg)` functions** in `internal/` tree — precondition for unit-testing the core loops.
 
 ## Skills
 

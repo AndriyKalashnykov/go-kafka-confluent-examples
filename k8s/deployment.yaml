@@ -12,6 +12,13 @@ spec:
       labels:
         app: kafka-confluent-go-consumer
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: kafka-config-volume
           configMap:
@@ -19,6 +26,20 @@ spec:
       containers:
         - name: kafka-confluent-go-consumer
           image: ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:v0.0.32
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           ports:
             - containerPort: 8080
           env:

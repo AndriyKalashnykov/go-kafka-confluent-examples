@@ -18,7 +18,7 @@ Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka 
 | Container | Docker, Docker Compose |
 | Orchestration | Kubernetes (`k8s/` manifests) |
 | CI/CD | GitHub Actions |
-| Static analysis | golangci-lint, gosec, govulncheck, gitleaks, actionlint, hadolint |
+| Static analysis | golangci-lint, gosec, govulncheck, gitleaks, actionlint, shellcheck, hadolint, trivy |
 | Version manager | [mise](https://mise.jdx.dev) (`.mise.toml`, `.nvmrc`) |
 | Dependency management | Renovate (automerge enabled) |
 
@@ -165,7 +165,8 @@ Run `make help` to see all available targets.
 | `make sec` | gosec static security analysis |
 | `make vulncheck` | govulncheck vulnerability scan |
 | `make secrets` | gitleaks secret scan |
-| `make lint-ci` | actionlint GitHub workflow linter |
+| `make lint-ci` | actionlint GitHub workflow linter (uses shellcheck) |
+| `make trivy-fs` | Trivy filesystem scan (secrets + K8s/Docker misconfigs) |
 
 ### Docker
 
