@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
@@ -63,7 +62,18 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("producer: create: %w", err)
 	}
-	defer p.Close()
+
+	// Drain delivery reports from p.Events() concurrently with Produce + Flush.
+	// Without this, Flush blocks forever: librdkafka counts undrained delivery
+	// reports as "outstanding events", so Flush always returns >0 even after
+	// every message has been ACKed by the broker.
+	drainDone := make(chan struct{})
+	go func() {
+		defer close(drainDone)
+		for e := range p.Events() {
+			handleEvent(out, e)
+		}
+	}()
 
 	topic := cfg.Topic
 	for n := 0; n < cfg.NumMessages; n++ {
@@ -88,39 +98,17 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 	}
 
-	// Flush blocks until all in-flight messages are delivered or the timeout
-	// elapses; returns count of messages still unflushed.
-	for p.Flush(10000) > 0 {
+	// Flush waits for all queued messages to be delivered AND for the drain
+	// goroutine above to consume the resulting delivery reports.
+	for p.Flush(1000) > 0 {
 		_, _ = fmt.Fprintln(out, "Still waiting to flush outstanding messages")
 		if err := ctx.Err(); err != nil {
 			break
 		}
 	}
-
-	// Drain any remaining delivery reports from p.Events(). Stops once there's
-	// nothing buffered for a short quiescence window — the events channel never
-	// closes until p.Close(), so a fixed Until deadline would busy-wait.
-	quiescence := 200 * time.Millisecond
-	timer := time.NewTimer(quiescence)
-	defer timer.Stop()
-drain:
-	for {
-		select {
-		case e, ok := <-p.Events():
-			if !ok {
-				break drain
-			}
-			handleEvent(out, e)
-			if !timer.Stop() {
-				<-timer.C
-			}
-			timer.Reset(quiescence)
-		case <-timer.C:
-			break drain
-		case <-ctx.Done():
-			break drain
-		}
-	}
+	// Closing the producer closes p.Events(), which unblocks the drain goroutine.
+	p.Close()
+	<-drainDone
 	return nil
 }
 
