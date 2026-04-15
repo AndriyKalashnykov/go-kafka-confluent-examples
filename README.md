@@ -215,6 +215,7 @@ Run `make help` to see all available targets.
 | `make test` | Run unit tests with `-race -cover` |
 | `make integration-test` | Run integration tests (`go test -tags=integration`) |
 | `make e2e-compose` | Run E2E via Docker Compose (PLAINTEXT Kafka broker + consumer image; real produce → consume round-trip) |
+| `make e2e` | Run E2E via KinD cluster (in-cluster Kafka + real `k8s/*.yaml` manifests, PLAINTEXT overrides) |
 | `make format` | Format Go code (`gofmt -s -w .`) |
 | `make lint` | Run golangci-lint and hadolint |
 | `make static-check` | Composite quality gate (format-check, lint, lint-ci, sec, vulncheck, secrets, deps-prune-check) |
@@ -285,6 +286,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
 | `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
 | `e2e-compose` | push, PR | `make e2e-compose` (Docker Compose with PLAINTEXT broker; ubuntu-latest) |
+| `e2e` | push, PR | `make e2e` (KinD cluster + in-cluster Kafka + real `k8s/` manifests; ubuntu-latest) |
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Aggregator for branch protection |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |

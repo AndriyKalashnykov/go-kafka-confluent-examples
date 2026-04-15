@@ -1,0 +1,12 @@
+# Placeholder Secret: the consumer's main() sets sasl.username / sasl.password
+# from these env vars unconditionally, but librdkafka ignores SASL settings
+# when security.protocol=PLAINTEXT (see e2e/k8s/cm.yaml). The values are never
+# used — non-empty so SetKey doesn't reject an empty string.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-secret
+type: Opaque
+stringData:
+  SASL_USERNAME: "unused"
+  SASL_PASSWORD: "unused"

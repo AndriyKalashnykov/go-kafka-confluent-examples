@@ -120,6 +120,40 @@ jobs:
       - name: E2E compose
         run: make e2e-compose
 
+  e2e:
+    needs: [setup, static-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Install KinD + kubectl
+        env:
+          # renovate: datasource=github-releases depName=kubernetes-sigs/kind
+          KIND_VERSION: v0.26.0
+          # renovate: datasource=github-releases depName=kubernetes/kubernetes
+          KUBECTL_VERSION: v1.32.0
+        run: |
+          set -euo pipefail
+          curl -fsSLo /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x /tmp/kind
+          sudo mv /tmp/kind /usr/local/bin/kind
+          # kubectl is preinstalled on GitHub Actions ubuntu-latest but not
+          # in act's catthehacker/ubuntu:act-latest — install unconditionally
+          # so local (act) and remote (GitHub) both work.
+          curl -fsSLo /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x /tmp/kubectl
+          sudo mv /tmp/kubectl /usr/local/bin/kubectl
+          kind version
+          kubectl version --client
+
+      - name: E2E KinD
+        run: make e2e
+
   build:
     needs: [setup, static-check]
     timeout-minutes: 20
@@ -329,7 +363,7 @@ jobs:
 
   ci-pass:
     if: always()
-    needs: [setup, static-check, test, integration-test, e2e-compose, build, release-binaries, docker]
+    needs: [setup, static-check, test, integration-test, e2e-compose, e2e, build, release-binaries, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

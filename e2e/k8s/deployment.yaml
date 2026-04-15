@@ -1,0 +1,74 @@
+# Consumer Deployment — same shape as k8s/deployment.yaml, but targets the
+# locally-built test image loaded into the KinD node. imagePullPolicy is
+# IfNotPresent (implicit for non-`:latest` tags) so kind uses the loaded
+# image instead of trying to pull from ghcr.io.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-confluent-go-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-confluent-go-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-confluent-go-consumer
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: kafka-config-volume
+          configMap:
+            name: kafka-config
+      containers:
+        - name: kafka-confluent-go-consumer
+          image: kafka-confluent-go-consumer:e2e
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_CONFIG_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_CONFIG_FILE
+            - name: KAFKA_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: KAFKA_TOPIC
+            - name: SASL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: SASL_USERNAME
+            - name: SASL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: SASL_PASSWORD
+          volumeMounts:
+            - name: kafka-config-volume
+              mountPath: /app
+      restartPolicy: Always

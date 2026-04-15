@@ -84,6 +84,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
 | `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
 | `e2e-compose` | push, PR | `make e2e-compose` (Docker Compose + PLAINTEXT broker; ubuntu-latest) |
+| `e2e` | push, PR | `make e2e` (KinD cluster + in-cluster Kafka + real `k8s/` manifests; ubuntu-latest) |
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Branch-protection aggregator |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
@@ -99,10 +100,6 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 - Use `make ci` to validate changes locally before pushing
 - mise manages the Go + Node toolchain (`.mise.toml`, `.nvmrc`); CI uses `actions/setup-go` with `go-version-file: go.mod`
 - Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `SHELLCHECK_VERSION`, `TRIVY_VERSION`) with `# renovate:` inline comments
-
-## Upgrade Backlog
-
-- [ ] **KinD E2E flow** — `make e2e-compose` covers the Docker Compose path (PLAINTEXT broker + consumer on a shared network, real produce → consume round-trip). A KinD flow with a Kafka StatefulSet and the real `k8s/*.yaml` manifests is still deferred; it would add cluster wiring coverage (Service/LoadBalancer, ConfigMap/Secret mounts, readiness probes) beyond what compose exercises.
 
 ## Skills
 
