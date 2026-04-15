@@ -36,6 +36,9 @@ services:
   consumer:
     image: kafka-confluent-go-consumer:e2e
     container_name: e2e-consumer
+    # The image is built locally — skip the default pull attempt that
+    # emits "pull access denied" noise on first run.
+    pull_policy: build
     build:
       dockerfile: Dockerfile.consumer
       context: ..
