@@ -16,8 +16,14 @@ func main() {
 	configFile := util.ReadEnvVar(util.KafkaConfigFileEnv)
 	conf := util.ReadConfig(configFile)
 
-	conf.SetKey(util.SaslUserName, util.ReadEnvVar(util.SaslUserNameEnv))
-	conf.SetKey(util.SaslPwd, util.ReadEnvVar(util.SaslPwdEnv))
+	if err := conf.SetKey(util.SaslUserName, util.ReadEnvVar(util.SaslUserNameEnv)); err != nil {
+		fmt.Printf("Failed to set %s: %s\n", util.SaslUserName, err)
+		os.Exit(1)
+	}
+	if err := conf.SetKey(util.SaslPwd, util.ReadEnvVar(util.SaslPwdEnv)); err != nil {
+		fmt.Printf("Failed to set %s: %s\n", util.SaslPwd, err)
+		os.Exit(1)
+	}
 
 	conf["group.id"] = "kafka-go-getting-started"
 	conf["auto.offset.reset"] = "earliest"
@@ -60,6 +66,7 @@ func main() {
 		}
 	}
 
-	c.Close()
-
+	if err := c.Close(); err != nil {
+		fmt.Printf("Failed to close consumer: %s\n", err)
+	}
 }

@@ -9,9 +9,13 @@ GO_BUILDER_VERSION=v$(GO_VERSION)
 OSXCROSS_PATH=/opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 # === Tool Versions (pinned) ===
-GOLANGCI_VERSION := 2.1.6
+# renovate: datasource=github-releases depName=golangci/golangci-lint
+GOLANGCI_VERSION := 2.11.4
+# renovate: datasource=github-releases depName=nektos/act
 ACT_VERSION      := 0.2.87
-HADOLINT_VERSION := 2.12.0
+# renovate: datasource=github-releases depName=hadolint/hadolint
+HADOLINT_VERSION := 2.14.0
+# renovate: datasource=github-releases depName=nvm-sh/nvm
 NVM_VERSION      := 0.40.4
 
 # Parse Go version from root go.mod

@@ -1,15 +1,16 @@
 # docker buildx build --build-arg TARGETARCH=arm64 --platform linux/arm64 --file Dockerfile -t kafka-confluent-go-consumer:latest .
 
 # https://hub.docker.com/_/golang/tags
-FROM --platform=linux/$TARGETARCH golang:1.26.1-alpine@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 AS builder
+FROM --platform=linux/$TARGETARCH golang:1.26.2-alpine@sha256:c2a1f7b2095d046ae14b286b18413a05bb82c9bca9b25fe7ff5efef0f0826166 AS builder
 
 ARG TARGETARCH
-RUN echo $TARGETARCH
 
 # librdkafka package for alpine yet
 # https://pkgs.alpinelinux.org/packages?name=librdkafka-dev&branch=edge&repo=&arch=&maintainer=John%20Anthony
-RUN apk add mold musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf
-RUN apk add build-base coreutils make musl-dev rpm wget curl cyrus-sasl-dev libevent libsasl lz4-dev openssh openssl openssl-dev yajl-dev zlib-dev
+RUN apk add --no-cache \
+      mold musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf \
+      build-base coreutils make rpm wget curl cyrus-sasl-dev libevent libsasl lz4-dev \
+      openssh openssl openssl-dev yajl-dev zlib-dev
 
 #ENV LIBRD_VER=2.3.0
 # Install librdkafka $LIBRD_VER

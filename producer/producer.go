@@ -15,8 +15,14 @@ func main() {
 	configFile := util.ReadEnvVar(util.KafkaConfigFileEnv)
 	conf := util.ReadConfig(configFile)
 
-	conf.SetKey(util.SaslUserName, util.ReadEnvVar(util.SaslUserNameEnv))
-	conf.SetKey(util.SaslPwd, util.ReadEnvVar(util.SaslPwdEnv))
+	if err := conf.SetKey(util.SaslUserName, util.ReadEnvVar(util.SaslUserNameEnv)); err != nil {
+		fmt.Printf("Failed to set %s: %s\n", util.SaslUserName, err)
+		os.Exit(1)
+	}
+	if err := conf.SetKey(util.SaslPwd, util.ReadEnvVar(util.SaslPwdEnv)); err != nil {
+		fmt.Printf("Failed to set %s: %s\n", util.SaslPwd, err)
+		os.Exit(1)
+	}
 
 	topic := util.ReadEnvVar(util.KafkaTopicEnv)
 	p, err := kafka.NewProducer(&conf)
@@ -59,7 +65,7 @@ func main() {
 	for n := 0; n < 10; n++ {
 		key := users[rand.Intn(len(users))]
 		data := items[rand.Intn(len(items))]
-		p.Produce(&kafka.Message{
+		err = p.Produce(&kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 			Key:            []byte(key),
 			Value:          []byte(data),
