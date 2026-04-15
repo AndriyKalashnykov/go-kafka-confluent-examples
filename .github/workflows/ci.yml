@@ -182,7 +182,11 @@ jobs:
 
   docker:
     if: github.ref_type == 'tag'
-    needs: [test, static-check, build]
+    # Serialize after release-binaries so a tag either produces BOTH the
+    # GitHub Release tarballs AND the ghcr.io image, or neither — avoiding
+    # half-released tags where users pinning to v1.2.3 find binaries but no
+    # image (or vice versa). Trade-off: ~2-4 min longer wall time on tag.
+    needs: [test, static-check, build, release-binaries]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -308,7 +312,7 @@ jobs:
 
   ci-pass:
     if: always()
-    needs: [setup, static-check, test, integration-test, build, docker]
+    needs: [setup, static-check, test, integration-test, build, release-binaries, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
