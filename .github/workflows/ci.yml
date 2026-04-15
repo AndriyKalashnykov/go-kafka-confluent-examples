@@ -134,9 +134,9 @@ jobs:
       - name: Install KinD + kubectl
         env:
           # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-          KIND_VERSION: v0.26.0
+          KIND_VERSION: v0.31.0
           # renovate: datasource=github-releases depName=kubernetes/kubernetes
-          KUBECTL_VERSION: v1.32.0
+          KUBECTL_VERSION: v1.35.3
         run: |
           set -euo pipefail
           curl -fsSLo /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"

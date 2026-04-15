@@ -56,7 +56,7 @@ make kafka-run-consumer    # run consumer
 | `librdkafka` + C toolchain | latest | Required by `confluent-kafka-go` (CGO) | System package (Alpine: `librdkafka-dev musl-dev gcc g++`) |
 | [Docker](https://www.docker.com/) | latest | Container builds and Compose | — |
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment, required for `make e2e` | — |
-| [KinD](https://kind.sigs.k8s.io/) | 0.26.0+ | Ephemeral Kubernetes cluster for `make e2e` | — |
+| [KinD](https://kind.sigs.k8s.io/) | 0.31.0+ | Ephemeral Kubernetes cluster for `make e2e` | — |
 | [Confluent CLI](https://docs.confluent.io/confluent-cli/current/install.html) | latest | Confluent Cloud cluster/topic setup | — |
 | [golangci-lint](https://golangci-lint.run/) | 2.11.4 | Go lint | `make deps` |
 | [hadolint](https://github.com/hadolint/hadolint) | 2.14.0 | Dockerfile lint | `make deps-hadolint` |

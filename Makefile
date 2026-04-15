@@ -18,7 +18,7 @@ ACT_VERSION      := 0.2.87
 # renovate: datasource=github-releases depName=hadolint/hadolint
 HADOLINT_VERSION := 2.14.0
 # renovate: datasource=go depName=golang.org/x/vuln/cmd/govulncheck
-GOVULNCHECK_VERSION := 1.1.4
+GOVULNCHECK_VERSION := 1.2.0
 # renovate: datasource=github-releases depName=securego/gosec
 GOSEC_VERSION    := 2.25.0
 # renovate: datasource=github-releases depName=zricethezav/gitleaks

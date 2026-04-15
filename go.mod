@@ -3,7 +3,7 @@ module github.com/AndriyKalashnykov/go-kafka-confluent-examples
 go 1.26.2
 
 require (
-	github.com/confluentinc/confluent-kafka-go/v2 v2.14.0
+	github.com/confluentinc/confluent-kafka-go/v2 v2.14.1
 	github.com/testcontainers/testcontainers-go v0.42.0
 )
 
