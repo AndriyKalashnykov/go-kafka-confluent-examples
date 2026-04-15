@@ -236,8 +236,14 @@ ci: deps static-check test integration-test build
 
 #ci-run: @ Run GitHub Actions workflow locally using act
 ci-run: deps-act
-	@act push --container-architecture linux/amd64 \
-		--artifact-server-path /tmp/act-artifacts
+	@# Pick a random high port for the artifact server so concurrent
+	@# `make ci-run` invocations across different repos don't race on
+	@# act's default 34567. --artifact-server-path uses a per-run temp
+	@# dir for the same reason.
+	@ACT_PORT=$$(shuf -i 40000-59999 -n 1); \
+	act push --container-architecture linux/amd64 \
+		--artifact-server-port "$$ACT_PORT" \
+		--artifact-server-path "$$(mktemp -d -t act-artifacts.XXXXXX)"
 
 #update: @ Update dependency packages to latest versions
 update: deps
