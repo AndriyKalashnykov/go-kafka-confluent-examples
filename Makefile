@@ -29,6 +29,8 @@ ACTIONLINT_VERSION := 1.7.12
 TRIVY_VERSION    := 0.69.3
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 SHELLCHECK_VERSION := 0.11.0
+# renovate: datasource=docker depName=minlag/mermaid-cli
+MERMAID_CLI_VERSION := 11.12.0
 
 # Parse Go version from root go.mod (used for release docker builder image tag)
 GO_VERSION  := $(shell grep -oP '^go \K[0-9.]+' go.mod)
@@ -197,8 +199,23 @@ lint-ci: deps-actionlint deps-shellcheck
 trivy-fs: deps-trivy
 	@trivy fs --scanners secret,misconfig --severity CRITICAL,HIGH --exit-code 1 .
 
-#static-check: @ Composite quality gate (lint + sec + vulncheck + secrets + lint-ci + trivy-fs)
-static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs
+#mermaid-lint: @ Parse-check every ```mermaid block in markdown files via pinned mermaid-cli (same engine github.com uses)
+mermaid-lint:
+	@set -euo pipefail; \
+	files=$$(git ls-files '*.md' | xargs -r grep -l '^```mermaid' 2>/dev/null || true); \
+	if [ -z "$$files" ]; then echo "No Mermaid blocks found, skipping"; exit 0; fi; \
+	rm -rf .bin/mermaid-lint && mkdir -p .bin/mermaid-lint; \
+	for f in $$files; do \
+	  out=".bin/mermaid-lint/$$(echo $$f | tr / _).out.md"; \
+	  docker run --rm -u $$(id -u):$$(id -g) \
+	    -v "$(CURDIR):/work" -w /work \
+	    minlag/mermaid-cli:$(MERMAID_CLI_VERSION) \
+	    -i "$$f" -o "$$out" >/dev/null; \
+	done; \
+	echo "Mermaid parse OK: $$files"
+
+#static-check: @ Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
+static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs mermaid-lint
 
 #test: @ Run unit tests
 test: deps
@@ -325,7 +342,7 @@ renovate-validate: deps
 
 .PHONY: help deps deps-check deps-act deps-hadolint deps-govulncheck deps-gosec deps-gitleaks deps-actionlint deps-shellcheck deps-trivy \
 	clean format format-check deps-prune deps-prune-check \
-	lint vulncheck sec secrets lint-ci trivy-fs static-check test integration-test build ci ci-run \
+	lint vulncheck sec secrets lint-ci trivy-fs mermaid-lint static-check test integration-test build ci ci-run \
 	update get release version \
 	consumer-image-build consumer-image-run consumer-image-stop \
 	kafka-run-producer kafka-run-consumer test-release \

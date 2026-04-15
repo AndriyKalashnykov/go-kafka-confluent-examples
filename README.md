@@ -7,6 +7,20 @@
 
 Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS.
 
+```mermaid
+C4Context
+  title System Context — go-kafka-confluent-examples
+
+  Person(dev, "Developer / Operator", "Runs binaries locally or deploys to Kubernetes")
+  System(sys, "Kafka Producer & Consumer", "Two Go CLIs publishing and subscribing to a Confluent Cloud topic")
+  System_Ext(ccloud, "Confluent Cloud", "Managed Kafka cluster (SASL/PLAIN over TLS 9092)")
+
+  Rel(dev, sys, "Builds, runs, deploys", "make / docker / kubectl")
+  Rel(sys, ccloud, "Produces & consumes", "Kafka protocol, SASL_SSL")
+
+  UpdateLayoutConfig($c4ShapeInRow="3")
+```
+
 ## Tech Stack
 
 | Component | Technology |
@@ -53,6 +67,64 @@ Install all required dependencies:
 ```bash
 make deps
 ```
+
+## Architecture
+
+### Container View
+
+```mermaid
+C4Container
+  title Container View — go-kafka-confluent-examples
+
+  Person(dev, "Developer / Operator")
+
+  System_Boundary(sys, "go-kafka-confluent-examples") {
+    Container(producer, "Producer", "Go 1.26, confluent-kafka-go v2.14 (CGO + librdkafka)", "Publishes messages to test-topic")
+    Container(consumer, "Consumer", "Go 1.26, confluent-kafka-go v2.14 (CGO + librdkafka)", "Subscribes and logs messages")
+    Container(cm, "ConfigMap", "Kubernetes", "kafka.properties — bootstrap server, SASL mechanism")
+    Container(secret, "Secret", "Kubernetes", "API key and secret for SASL/PLAIN auth")
+  }
+
+  System_Ext(topic, "Confluent Cloud Topic", "test-topic — partitioned, replicated")
+
+  Rel(dev, producer, "make kafka-run-producer")
+  Rel(dev, consumer, "make kafka-run-consumer / kubectl apply")
+  Rel(producer, cm, "Reads config")
+  Rel(consumer, cm, "Reads config")
+  Rel(producer, secret, "Reads credentials")
+  Rel(consumer, secret, "Reads credentials")
+  Rel(producer, topic, "Produces", "Kafka / SASL_SSL")
+  Rel(consumer, topic, "Consumes", "Kafka / SASL_SSL")
+```
+
+- **Producer** / **Consumer** — statically-linked Go binaries; both depend on `librdkafka` via CGO (see [`Dockerfile.consumer`](Dockerfile.consumer) for the Alpine build chain)
+- **ConfigMap** holds non-secret Kafka client settings (`bootstrap.servers`, `security.protocol`, `sasl.mechanism`); **Secret** holds the API key/secret pair — both are mounted into the consumer pod by `k8s/deployment.yaml`
+- **Confluent Cloud Topic** is external; authentication is SASL/PLAIN over TLS
+
+### Produce → Consume Flow
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant P as Producer
+  participant CC as Confluent Cloud<br/>(test-topic)
+  participant C as Consumer
+
+  Note over P,C: Bootstrap — both load kafka.properties + .env (SASL_SSL, API key/secret)
+
+  P->>CC: Connect (SASL/PLAIN over TLS 9092)
+  CC-->>P: Authenticated, partition metadata
+  P->>CC: Produce(key, value)
+  CC-->>P: Delivery report (ack)
+
+  C->>CC: Connect (SASL/PLAIN over TLS 9092)
+  CC-->>C: Authenticated, assigned partitions
+  C->>CC: Poll
+  CC-->>C: Message batch
+  C->>CC: Commit offset
+```
+
+Source diagrams live inline in this README; lint via `make mermaid-lint` (pinned [`minlag/mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) Docker image).
 
 ## Usage
 
@@ -154,7 +226,7 @@ Run `make help` to see all available targets.
 | Target | Description |
 |--------|-------------|
 | `make deps` | Install and verify required toolchain (mise + Go) |
-| `make deps-check` | Show required Go/Node versions and mise status |
+| `make deps-check` | Show required Go version and mise status |
 | `make deps-prune` | Run `go mod tidy` |
 | `make get` | Download and install dependency packages |
 | `make update` | Update dependency packages to latest versions |
@@ -168,6 +240,7 @@ Run `make help` to see all available targets.
 | `make secrets` | gitleaks secret scan |
 | `make lint-ci` | actionlint GitHub workflow linter (uses shellcheck) |
 | `make trivy-fs` | Trivy filesystem scan (secrets + K8s/Docker misconfigs) |
+| `make mermaid-lint` | Parse-check Mermaid diagrams via pinned `minlag/mermaid-cli` |
 
 ### Docker
 
@@ -206,12 +279,14 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 | Job | Triggers | Steps |
 |-----|----------|-------|
-| `static-check` | push, PR | `make static-check` composite (lint + sec + vulncheck + secrets + lint-ci) |
-| `test` | push, PR | Matrix: ubuntu-latest + macos-latest |
+| `setup` | push, PR | Extract Go version from `go.mod` for downstream jobs |
+| `static-check` | push, PR | `make static-check` composite (lint + sec + vulncheck + secrets + lint-ci + trivy-fs) |
+| `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
+| `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Aggregator for branch protection |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | tags only | Docker build and push to `ghcr.io` |
+| `docker` | tags only | Docker build, Trivy scan, smoke test, push to `ghcr.io`, cosign sign |
 
 ### Required Secrets and Variables
 
