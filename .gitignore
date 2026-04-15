@@ -113,3 +113,4 @@ scripts/cs.sh
 .DS_Store
 llvm.sh
 .idea/
+.claude/
