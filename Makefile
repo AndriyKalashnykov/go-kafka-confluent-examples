@@ -26,7 +26,7 @@ GITLEAKS_VERSION := 8.29.0
 # renovate: datasource=github-releases depName=rhysd/actionlint
 ACTIONLINT_VERSION := 1.7.7
 # renovate: datasource=github-releases depName=aquasecurity/trivy
-TRIVY_VERSION    := 0.60.0
+TRIVY_VERSION    := 0.69.3
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 SHELLCHECK_VERSION := 0.10.0
 
@@ -134,9 +134,17 @@ deps-shellcheck: deps
 
 #deps-trivy: @ Install Trivy for security scanning
 deps-trivy: deps
-	@command -v trivy >/dev/null 2>&1 || { echo "Installing trivy $(TRIVY_VERSION)..."; \
+	@command -v trivy >/dev/null 2>&1 || { \
+		OS_NAME=$$(uname -s); \
+		ARCH=$$(uname -m); \
+		case "$$ARCH" in x86_64) ARCH_NAME=64bit ;; aarch64|arm64) ARCH_NAME=ARM64 ;; *) ARCH_NAME=$$ARCH ;; esac; \
+		echo "Installing trivy $(TRIVY_VERSION) for $$OS_NAME-$$ARCH_NAME..."; \
 		mkdir -p $(HOME)/.local/bin; \
-		curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(HOME)/.local/bin v$(TRIVY_VERSION); }
+		curl -sSfL -o /tmp/trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v$(TRIVY_VERSION)/trivy_$(TRIVY_VERSION)_$${OS_NAME}-$${ARCH_NAME}.tar.gz" && \
+		tar -xzf /tmp/trivy.tar.gz -C /tmp trivy && \
+		install -m 755 /tmp/trivy $(HOME)/.local/bin/trivy && \
+		rm -f /tmp/trivy /tmp/trivy.tar.gz; \
+	}
 
 #clean: @ Cleanup
 clean:

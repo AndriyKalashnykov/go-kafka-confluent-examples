@@ -98,7 +98,7 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 
 ## Upgrade Backlog
 
-- [ ] **Docker image hardening** — add Trivy image scan (pre-push), cosign keyless signing, SBOM generation, multi-arch (`linux/arm64`), smoke test between build and push. Run `/harden-image-pipeline` to apply interactively. (Trivy filesystem + K8s misconfig scans already wired via `make trivy-fs`.)
+- [ ] **Multi-arch Docker image** (`linux/arm64`) — requires CGO cross-compilation for `librdkafka` (cross-gcc, arm64 musl-dev, QEMU emulation). Non-trivial for CGO projects. Currently single-arch (`linux/amd64`). Other hardening gates (Trivy image scan, smoke test, cosign keyless signing) already applied in the `docker` job.
 - [ ] **Integration + e2e test coverage** — zero `*_test.go` files exist. Add Testcontainers-backed Kafka producer→consumer round-trip (integration), Docker Compose + KinD flows (e2e), and Makefile targets `integration-test` / `e2e` / `e2e-compose`. Run `/test-coverage-analysis` to generate stubs.
 - [ ] **Refactor producer/consumer `main()` into testable `Run(ctx, cfg)` functions** in `internal/` tree — precondition for unit-testing the core loops.
 

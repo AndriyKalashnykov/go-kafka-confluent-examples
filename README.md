@@ -225,6 +225,28 @@ The cleanup workflow (`cleanup-runs.yml`) runs weekly to prune workflow runs (re
 
 [Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with `platformAutomerge: true` and `automergeType: "branch"`.
 
+### Pre-push image hardening
+
+The `docker` job runs the following gates **before** any image is pushed to `ghcr.io`. Any failure blocks the release.
+
+| # | Gate | Catches | Tool |
+|---|------|---------|------|
+| 1 | Build local single-arch image (`load: true`) | Build regressions on the runner architecture | `docker/build-push-action` |
+| 2 | **Trivy image scan** (CRITICAL/HIGH blocking) | CVEs in the base image, OS packages, build layers | `aquasecurity/trivy-action` with `image-ref:` |
+| 3 | **Smoke test** | `/consumer` binary is present and executable in the final image | `docker run --entrypoint=/bin/sh` |
+| 4 | Publish (`linux/amd64`) | — | `docker/build-push-action` with `push: true` |
+| 5 | **Cosign keyless OIDC signing** | Sigstore signature on the manifest digest, per tag | `sigstore/cosign-installer` + `cosign sign` |
+
+Buildkit in-manifest attestations (`provenance` + `sbom`) are disabled so the image index stays free of `unknown/unknown` platform entries — this lets the GHCR Packages UI render the "OS / Arch" tab. Cosign keyless signing provides the Sigstore signature for supply-chain verification.
+
+Verify a published image's signature:
+
+```bash
+cosign verify ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:<tag> \
+  --certificate-identity-regexp 'https://github\.com/AndriyKalashnykov/go-kafka-confluent-examples/.+' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ## Contributing
 
 Contributions welcome — open a pull request.
