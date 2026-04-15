@@ -20,15 +20,15 @@ HADOLINT_VERSION := 2.14.0
 # renovate: datasource=go depName=golang.org/x/vuln/cmd/govulncheck
 GOVULNCHECK_VERSION := 1.1.4
 # renovate: datasource=github-releases depName=securego/gosec
-GOSEC_VERSION    := 2.22.8
+GOSEC_VERSION    := 2.25.0
 # renovate: datasource=github-releases depName=zricethezav/gitleaks
-GITLEAKS_VERSION := 8.29.0
+GITLEAKS_VERSION := 8.30.1
 # renovate: datasource=github-releases depName=rhysd/actionlint
-ACTIONLINT_VERSION := 1.7.7
+ACTIONLINT_VERSION := 1.7.12
 # renovate: datasource=github-releases depName=aquasecurity/trivy
 TRIVY_VERSION    := 0.69.3
 # renovate: datasource=github-releases depName=koalaman/shellcheck
-SHELLCHECK_VERSION := 0.10.0
+SHELLCHECK_VERSION := 0.11.0
 
 # Parse Go version from root go.mod (used for release docker builder image tag)
 GO_VERSION  := $(shell grep -oP '^go \K[0-9.]+' go.mod)
