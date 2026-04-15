@@ -33,15 +33,16 @@ tmpl/              - Template files (.env, kafka.properties, k8s secrets)
 ```bash
 make help           # List all available targets
 make build          # Build producer and consumer binaries (output: .bin/)
-make test           # Run tests with -race
+make test           # Unit tests (fast, no external deps; -race -cover)
+make integration-test # Integration tests (Testcontainers-backed, -tags=integration)
 make format         # Format Go code
 make lint           # Run golangci-lint and hadolint
-make static-check   # Composite quality gate (format-check + lint + lint-ci + sec + vulncheck + secrets + deps-prune-check)
+make static-check   # Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs)
 make ci             # Run all CI checks (static-check, test, build)
 make ci-run         # Run GitHub Actions workflow locally via act
 make clean          # Remove build artifacts
 make deps           # Install and verify required tools (mise + Go)
-make deps-check     # Show required Go/Node versions and mise status
+make deps-check     # Show required Go version and mise status
 ```
 
 ### Environment
@@ -78,12 +79,14 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 | Job | Triggers | Steps |
 |-----|----------|-------|
+| `setup` | push, PR | Extract Go version from `go.mod` for downstream jobs |
 | `static-check` | push, PR | `make static-check` composite |
-| `test` | push, PR | Matrix: ubuntu-latest + macos-latest |
+| `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
+| `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Branch-protection aggregator |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | tags only | Docker build and push to ghcr.io |
+| `docker` | tags only | Build + Trivy scan + smoke test + push to ghcr.io + cosign sign |
 
 Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs).
 
