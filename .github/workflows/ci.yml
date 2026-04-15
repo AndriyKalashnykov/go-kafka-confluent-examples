@@ -280,7 +280,10 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.consumer
-          platforms: linux/amd64
+          # arm64 cross-compiled via QEMU (setup-qemu-action above); CGO +
+          # librdkafka links against per-arch Alpine packages, so the same
+          # Dockerfile produces a correct binary for each TARGETARCH.
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: false  # Pattern A — keeps image index free of unknown/unknown entries so GHCR "OS / Arch" tab renders
           sbom: false        # Pattern A — cosign keyless signing below provides supply-chain verification
