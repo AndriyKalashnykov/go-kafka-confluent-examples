@@ -1,23 +1,24 @@
 //go:build integration
 
 // Package kafkaroundtrip_test exercises the producer + consumer Run loops
-// against a real Kafka broker launched via Testcontainers (KRaft mode — no
-// Zookeeper). Requires Docker to be available on the host.
+// against a real Kafka broker launched via Testcontainers. The broker runs
+// Apache Kafka in KRaft mode (no Zookeeper).
 //
-// NOTE: the testcontainers-go/kafka module's `confluentinc/confluent-local`
-// setup re-writes `KAFKA_ADVERTISED_LISTENERS` at container start, but the
-// rewrite doesn't propagate reliably on every Docker host (observed: broker
-// advertises `localhost:9092` internally, clients can't route). The test is
-// therefore gated on the `RUN_KAFKA_INTEGRATION=1` environment variable so it
-// only runs on hosts where the setup has been verified. See CLAUDE.md
-// Upgrade Backlog for the follow-up to switch to a `GenericContainer` with
-// hand-written `KAFKA_ADVERTISED_LISTENERS` patching.
+// The advertised listener is computed dynamically from whatever host+port
+// Testcontainers publishes (which differs between a direct `go test` on the
+// host and a `go test` run inside an `act` container that sees Docker over
+// the bridge gateway). The override entrypoint waits for a config file with
+// KAFKA_ADVERTISED_LISTENERS, sourced before the normal Kafka entrypoint.
+//
+// The stock testcontainers-go/modules/kafka wrapper (v0.42.0) is hard-coded
+// to Confluent's configure scripts and fails with `apache/kafka` images; this
+// is the documented workaround.
 package kafkaroundtrip_test
 
 import (
 	"bytes"
 	"context"
-	"os"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -26,50 +27,29 @@ import (
 	"github.com/AndriyKalashnykov/go-kafka-confluent-examples/internal/consumer"
 	"github.com/AndriyKalashnykov/go-kafka-confluent-examples/internal/producer"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	kafkatc "github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
-	// confluent-local ships the full Confluent broker in KRaft mode; the
-	// testcontainers/kafka module is hard-coded to drive Confluent-platform
-	// images, so `apache/kafka` doesn't work here.
-	kafkaImage     = "confluentinc/confluent-local:7.8.0"
+	kafkaImage     = "apache/kafka:3.9.0"
 	testTopic      = "test-topic"
 	messagesToSend = 5
-	consumeTimeout = 45 * time.Second
+	consumeTimeout = 60 * time.Second
+	clusterID      = "MkU3OEVBNTcwNTJENDM2Qk"
 )
 
 func TestProducerConsumerRoundTrip(t *testing.T) {
-	if os.Getenv("RUN_KAFKA_INTEGRATION") != "1" {
-		t.Skip("skipping Kafka integration test: set RUN_KAFKA_INTEGRATION=1 to run (requires Docker and a verified testcontainers-kafka setup)")
-	}
 	ctx := context.Background()
 
-	kc, err := kafkatc.Run(ctx, kafkaImage, kafkatc.WithClusterID("test-cluster"))
-	if err != nil {
-		t.Fatalf("start Kafka container: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := kc.Terminate(ctx); err != nil {
-			t.Logf("terminate container: %v", err)
-		}
-	})
-
-	brokers, err := kc.Brokers(ctx)
-	if err != nil {
-		t.Fatalf("get brokers: %v", err)
-	}
-	if len(brokers) == 0 {
-		t.Fatal("no brokers returned by container")
-	}
-	bootstrap := strings.Join(brokers, ",")
+	bootstrap, terminate := startKafka(t, ctx)
+	defer terminate()
 	t.Logf("Kafka bootstrap: %s", bootstrap)
 
-	// Produce first, then consume with auto.offset.reset=earliest. Ordering
-	// the two phases avoids races between consumer-group-join and the first
-	// produce call, and keeps the test independent of poll timing.
+	createTopic(t, ctx, bootstrap, testTopic)
+
 	producerOut := &syncBuffer{}
-	producerCtx, producerCancel := context.WithTimeout(ctx, 30*time.Second)
+	producerCtx, producerCancel := context.WithTimeout(ctx, 90*time.Second)
 	defer producerCancel()
 	if err := producer.Run(producerCtx, producer.Config{
 		KafkaConfig: kafka.ConfigMap{
@@ -116,8 +96,106 @@ func TestProducerConsumerRoundTrip(t *testing.T) {
 	}
 }
 
-// syncBuffer is an io.Writer safe for concurrent use from the consumer's
-// delivery-report goroutine and the main test goroutine.
+// startKafka boots an Apache Kafka broker in KRaft mode. The container's
+// entrypoint is overridden to block until a /tmp/advertised.env file is
+// written with KAFKA_ADVERTISED_LISTENERS pointing to the Testcontainers-
+// mapped host:port (computed in the PostStart hook), then exec's the normal
+// Kafka entrypoint. This avoids the `localhost:9092` metadata-leak footgun.
+func startKafka(t *testing.T, ctx context.Context) (bootstrap string, terminate func()) {
+	t.Helper()
+
+	req := testcontainers.ContainerRequest{
+		Image:        kafkaImage,
+		ExposedPorts: []string{"9092/tcp"},
+		Env: map[string]string{
+			"KAFKA_NODE_ID":                                  "1",
+			"KAFKA_PROCESS_ROLES":                            "broker,controller",
+			"KAFKA_CONTROLLER_QUORUM_VOTERS":                 "1@localhost:9093",
+			"KAFKA_LISTENERS":                                "PLAINTEXT://:9092,CONTROLLER://:9093",
+			"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP":           "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT",
+			"KAFKA_CONTROLLER_LISTENER_NAMES":                "CONTROLLER",
+			"KAFKA_INTER_BROKER_LISTENER_NAME":               "PLAINTEXT",
+			"KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR":         "1",
+			"KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR": "1",
+			"KAFKA_TRANSACTION_STATE_LOG_MIN_ISR":            "1",
+			"KAFKA_LOG_DIRS":                                 "/tmp/kraft-combined-logs",
+			"CLUSTER_ID":                                     clusterID,
+		},
+		Entrypoint: []string{"/bin/sh", "-c", "while [ ! -f /tmp/advertised.env ]; do sleep 0.05; done; . /tmp/advertised.env; exec /etc/kafka/docker/run"},
+		WaitingFor: wait.ForLog("Kafka Server started").WithStartupTimeout(120 * time.Second),
+		LifecycleHooks: []testcontainers.ContainerLifecycleHooks{
+			{
+				PostStarts: []testcontainers.ContainerHook{
+					func(ctx context.Context, c testcontainers.Container) error {
+						mapped, err := c.MappedPort(ctx, "9092/tcp")
+						if err != nil {
+							return fmt.Errorf("mapped port: %w", err)
+						}
+						host, err := c.Host(ctx)
+						if err != nil {
+							return fmt.Errorf("host: %w", err)
+						}
+						content := fmt.Sprintf("export KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://%s:%s\n", host, mapped.Port())
+						return c.CopyToContainer(ctx, []byte(content), "/tmp/advertised.env", 0o644)
+					},
+				},
+			},
+		},
+	}
+
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("start Kafka container: %v", err)
+	}
+	terminate = func() {
+		if err := c.Terminate(ctx); err != nil {
+			t.Logf("terminate container: %v", err)
+		}
+	}
+
+	mapped, err := c.MappedPort(ctx, "9092/tcp")
+	if err != nil {
+		terminate()
+		t.Fatalf("mapped port: %v", err)
+	}
+	host, err := c.Host(ctx)
+	if err != nil {
+		terminate()
+		t.Fatalf("host: %v", err)
+	}
+	return fmt.Sprintf("%s:%s", host, mapped.Port()), terminate
+}
+
+// createTopic creates testTopic via the AdminClient so the producer's first
+// Produce call sees a ready topic instead of retrying "Unknown topic".
+func createTopic(t *testing.T, ctx context.Context, bootstrap, topic string) {
+	t.Helper()
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": bootstrap})
+	if err != nil {
+		t.Fatalf("admin client: %v", err)
+	}
+	defer admin.Close()
+
+	createCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	results, err := admin.CreateTopics(createCtx, []kafka.TopicSpecification{{
+		Topic:             topic,
+		NumPartitions:     1,
+		ReplicationFactor: 1,
+	}})
+	if err != nil {
+		t.Fatalf("CreateTopics: %v", err)
+	}
+	for _, r := range results {
+		if r.Error.Code() != kafka.ErrNoError && r.Error.Code() != kafka.ErrTopicAlreadyExists {
+			t.Fatalf("CreateTopic %s: %v", r.Topic, r.Error)
+		}
+	}
+}
+
 type syncBuffer struct {
 	mu  sync.Mutex
 	buf bytes.Buffer

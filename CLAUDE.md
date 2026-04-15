@@ -102,8 +102,7 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 ## Upgrade Backlog
 
 - [ ] **Multi-arch Docker image** (`linux/arm64`) — requires CGO cross-compilation for `librdkafka` (cross-gcc, arm64 musl-dev, QEMU emulation). Non-trivial for CGO projects. Currently single-arch (`linux/amd64`). Other hardening gates (Trivy image scan, smoke test, cosign keyless signing) already applied in the `docker` job.
-- [ ] **Fix Testcontainers Kafka networking** — `internal/kafkaroundtrip/roundtrip_integration_test.go` is present and compiles, but gated on `RUN_KAFKA_INTEGRATION=1` because `testcontainers-go/modules/kafka@0.42.0` with `confluentinc/confluent-local:7.8.0` fails to rewrite `KAFKA_ADVERTISED_LISTENERS` to the dynamic host port on some hosts — the broker reports `localhost:9092` (unmapped) in metadata and the producer's `Flush` blocks forever waiting for delivery reports. Follow-up: switch to a `GenericContainer` with hand-written env vars that derive `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:${HOST_PORT}` via the Reaper hook pattern. Once fixed, wire `RUN_KAFKA_INTEGRATION=1` into the CI `integration-test` job.
-- [ ] **E2E tests** — Docker Compose flow (`make e2e-compose` with a Kafka broker sidecar + SASL-free test fixture) and KinD flow (`make e2e` with a Kafka StatefulSet) are deferred. Both blocked on: (1) adding a broker to `docker-compose.yml` or a KinD-deployable Kafka manifest, (2) the same Testcontainers networking work above.
+- [ ] **E2E tests** — Docker Compose flow (`make e2e-compose` with a Kafka broker sidecar + SASL-free test fixture) and KinD flow (`make e2e` with a Kafka StatefulSet) are deferred — need to add a broker to `docker-compose.yml` or a KinD-deployable Kafka manifest.
 
 ## Skills
 
