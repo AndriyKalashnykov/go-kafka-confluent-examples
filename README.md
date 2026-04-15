@@ -55,7 +55,8 @@ make kafka-run-consumer    # run consumer
 | [Go](https://go.dev/dl/) | 1.26.2 (from `go.mod`) | Language runtime and compiler | `make deps` (via mise + `.mise.toml`) |
 | `librdkafka` + C toolchain | latest | Required by `confluent-kafka-go` (CGO) | System package (Alpine: `librdkafka-dev musl-dev gcc g++`) |
 | [Docker](https://www.docker.com/) | latest | Container builds and Compose | — |
-| [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment (optional) | — |
+| [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment, required for `make e2e` | — |
+| [KinD](https://kind.sigs.k8s.io/) | 0.26.0+ | Ephemeral Kubernetes cluster for `make e2e` | — |
 | [Confluent CLI](https://docs.confluent.io/confluent-cli/current/install.html) | latest | Confluent Cloud cluster/topic setup | — |
 | [golangci-lint](https://golangci-lint.run/) | 2.11.4 | Go lint | `make deps` |
 | [hadolint](https://github.com/hadolint/hadolint) | 2.14.0 | Dockerfile lint | `make deps-hadolint` |
@@ -218,7 +219,7 @@ Run `make help` to see all available targets.
 | `make e2e` | Run E2E via KinD cluster (in-cluster Kafka + real `k8s/*.yaml` manifests, PLAINTEXT overrides) |
 | `make format` | Format Go code (`gofmt -s -w .`) |
 | `make lint` | Run golangci-lint and hadolint |
-| `make static-check` | Composite quality gate (format-check, lint, lint-ci, sec, vulncheck, secrets, deps-prune-check) |
+| `make static-check` | Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
 | `make clean` | Remove build artifacts |
 | `make kafka-run-producer` | Build and run producer |
 | `make kafka-run-consumer` | Build and run consumer |
@@ -314,7 +315,7 @@ The `docker` job runs the following gates **before** any image is pushed to `ghc
 | 1 | Build local single-arch image (`load: true`) | Build regressions on the runner architecture | `docker/build-push-action` |
 | 2 | **Trivy image scan** (CRITICAL/HIGH blocking) | CVEs in the base image, OS packages, build layers | `aquasecurity/trivy-action` with `image-ref:` |
 | 3 | **Smoke test** | `/consumer` binary is present and executable in the final image | `docker run --entrypoint=/bin/sh` |
-| 4 | Publish (`linux/amd64`) | — | `docker/build-push-action` with `push: true` |
+| 4 | Publish (`linux/amd64,linux/arm64`) | Multi-arch manifest index; arm64 CGO cross-compiled under QEMU | `docker/build-push-action` with `push: true` |
 | 5 | **Cosign keyless OIDC signing** | Sigstore signature on the manifest digest, per tag | `sigstore/cosign-installer` + `cosign sign` |
 
 Buildkit in-manifest attestations (`provenance` + `sbom`) are disabled so the image index stays free of `unknown/unknown` platform entries — this lets the GHCR Packages UI render the "OS / Arch" tab. Cosign keyless signing provides the Sigstore signature for supply-chain verification.

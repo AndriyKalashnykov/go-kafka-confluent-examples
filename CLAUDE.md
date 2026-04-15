@@ -23,6 +23,7 @@ producer/          - Kafka producer application
 consumer/          - Kafka consumer application
 internal/          - Shared internal packages
 k8s/               - Kubernetes manifests (ns, cm, sc, deployment, service)
+e2e/               - E2E harness: compose flow + KinD flow + PLAINTEXT fixtures
 scripts/           - Setup scripts (cross-compilation, toolchain install)
 tmpl/              - Template files (.env, kafka.properties, k8s secrets)
 .github/workflows/ - CI/CD workflows
@@ -35,9 +36,11 @@ make help           # List all available targets
 make build          # Build producer and consumer binaries (output: .bin/)
 make test           # Unit tests (fast, no external deps; -race -cover)
 make integration-test # Integration tests (Testcontainers-backed, -tags=integration)
+make e2e-compose    # E2E via Docker Compose (PLAINTEXT broker + consumer image)
+make e2e            # E2E via KinD cluster + in-cluster Kafka + real k8s/ manifests
 make format         # Format Go code
 make lint           # Run golangci-lint and hadolint
-make static-check   # Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs)
+make static-check   # Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
 make ci             # Run all CI checks (static-check, test, build)
 make ci-run         # Run GitHub Actions workflow locally via act
 make clean          # Remove build artifacts
@@ -99,7 +102,7 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 - Binary output directory: `.bin/`
 - Use `make ci` to validate changes locally before pushing
 - mise manages the Go + Node toolchain (`.mise.toml`, `.nvmrc`); CI uses `actions/setup-go` with `go-version-file: go.mod`
-- Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `SHELLCHECK_VERSION`, `TRIVY_VERSION`) with `# renovate:` inline comments
+- Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `SHELLCHECK_VERSION`, `TRIVY_VERSION`, `MERMAID_CLI_VERSION`) with `# renovate:` inline comments; workflow-level env pins (`KIND_VERSION`, `KUBECTL_VERSION` in `.github/workflows/ci.yml`) are tracked via a second `customManagers` regex in `renovate.json`
 
 ## Skills
 
