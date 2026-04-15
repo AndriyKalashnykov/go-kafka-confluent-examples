@@ -6,13 +6,14 @@ Go-based Confluent Kafka Cloud producer/consumer examples using the [confluent-k
 
 ## Tech Stack
 
-- **Language**: Go 1.26
-- **Kafka Client**: confluent-kafka-go v2
+- **Language**: Go 1.26.2
+- **Kafka Client**: confluent-kafka-go v2.14.0 (CGO, `librdkafka`)
 - **Build**: Make, GoReleaser (cross-compilation)
 - **Container**: Docker, Docker Compose
 - **Orchestration**: Kubernetes
 - **CI/CD**: GitHub Actions
-- **Linting**: golangci-lint, hadolint
+- **Version manager**: mise (`.mise.toml`, `.nvmrc`)
+- **Static analysis**: golangci-lint, gosec, govulncheck, gitleaks, actionlint, hadolint
 - **Dependency Management**: Renovate
 
 ## Project Structure
@@ -30,15 +31,17 @@ tmpl/              - Template files (.env, kafka.properties, k8s secrets)
 ## Build & Development
 
 ```bash
-make help          # List all available targets
-make build         # Build producer and consumer binaries (output: .bin/)
-make test          # Run tests
-make lint          # Run golangci-lint and hadolint
-make ci            # Run all CI checks (lint, test, build)
-make ci-run        # Run GitHub Actions workflow locally via act
-make clean         # Remove build artifacts
-make deps          # Install and verify required tools
-make deps-check    # Show required Go versions and gvm status
+make help           # List all available targets
+make build          # Build producer and consumer binaries (output: .bin/)
+make test           # Run tests with -race
+make format         # Format Go code
+make lint           # Run golangci-lint and hadolint
+make static-check   # Composite quality gate (format-check + lint + lint-ci + sec + vulncheck + secrets + deps-prune-check)
+make ci             # Run all CI checks (static-check, test, build)
+make ci-run         # Run GitHub Actions workflow locally via act
+make clean          # Remove build artifacts
+make deps           # Install and verify required tools (mise + Go)
+make deps-check     # Show required Go/Node versions and mise status
 ```
 
 ### Environment
@@ -75,9 +78,12 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 | Job | Triggers | Steps |
 |-----|----------|-------|
-| **ci** | push, PR, tags | Lint, Test, Build (matrix: ubuntu + macos) |
-| **release-binaries** | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| **release-docker-images** | tags only | Docker build and push to ghcr.io |
+| `static-check` | push, PR | `make static-check` composite |
+| `test` | push, PR | Matrix: ubuntu-latest + macos-latest |
+| `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
+| `ci-pass` | always | Branch-protection aggregator |
+| `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
+| `docker` | tags only | Docker build and push to ghcr.io |
 
 Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs).
 
@@ -87,8 +93,16 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 - `GOPRIVATE` set to this repository
 - Binary output directory: `.bin/`
 - Use `make ci` to validate changes locally before pushing
-- Use gvm for local Go version management; CI uses `actions/setup-go` with `go-version-file: go.mod`
-- Tool versions pinned in Makefile (GOLANGCI_VERSION, ACT_VERSION, HADOLINT_VERSION)
+- mise manages the Go + Node toolchain (`.mise.toml`, `.nvmrc`); CI uses `actions/setup-go` with `go-version-file: go.mod`
+- Tool versions pinned in Makefile (`GOLANGCI_VERSION`, `ACT_VERSION`, `HADOLINT_VERSION`, `GOVULNCHECK_VERSION`, `GOSEC_VERSION`, `GITLEAKS_VERSION`, `ACTIONLINT_VERSION`, `TRIVY_VERSION`) with `# renovate:` inline comments
+
+## Upgrade Backlog
+
+- [ ] **Docker image hardening** — add Trivy fs + image scans, cosign keyless signing, SBOM generation, multi-arch (`linux/arm64`), smoke test between build and push. Run `/harden-image-pipeline` to apply interactively.
+- [ ] **Integration + e2e test coverage** — zero `*_test.go` files exist. Add Testcontainers-backed Kafka producer→consumer round-trip (integration), Docker Compose + KinD flows (e2e), and Makefile targets `integration-test` / `e2e` / `e2e-compose`. Run `/test-coverage-analysis` to generate stubs.
+- [ ] **Consolidate Dockerfile and Dockerfile.consumer** — two divergent Dockerfiles with different `USER` and `TARGETARCH` handling.
+- [ ] **Refactor producer/consumer `main()` into testable `Run(ctx, cfg)` functions** in `internal/` tree.
+- [ ] **Verify `k8s/cm.yaml` and `k8s/sc.yaml`** — referenced by `make k8s-deploy` but may not be committed (generated from templates).
 
 ## Skills
 
@@ -99,6 +113,6 @@ Use the following skills when working on related files:
 | `Makefile` | `/makefile` |
 | `renovate.json` | `/renovate` |
 | `README.md` | `/readme` |
-| `.github/workflows/*.yml` | `/ci-workflow` |
+| `.github/workflows/*.{yml,yaml}` | `/ci-workflow` |
 
 When spawning subagents, always pass conventions from the respective skill into the agent's prompt.

@@ -63,8 +63,8 @@ func main() {
 	items := [...]string{"book", "alarm clock", "t-shirts", "gift card", "batteries"}
 
 	for n := 0; n < 10; n++ {
-		key := users[rand.Intn(len(users))]
-		data := items[rand.Intn(len(items))]
+		key := users[rand.Intn(len(users))]  // #nosec G404 -- sample data, not security-sensitive
+		data := items[rand.Intn(len(items))] // #nosec G404 -- sample data, not security-sensitive
 		err = p.Produce(&kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 			Key:            []byte(key),

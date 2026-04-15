@@ -4,14 +4,19 @@ on:
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: cleanup-${{ github.workflow }}
+  cancel-in-progress: false
 
 permissions:
   actions: write
 
 jobs:
-  cleanup:
+  cleanup-runs:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
       RETAIN_DAYS: 7
@@ -19,8 +24,9 @@ jobs:
     steps:
       - name: Delete old workflow runs
         run: |
-          CUTOFF=$(date -u -d "$RETAIN_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          CUTOFF=$(date -u -d "${RETAIN_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)
           gh run list --repo "${{ github.repository }}" \
             --json databaseId,createdAt --limit 200 \
-            --jq "sort_by(.createdAt) | reverse | .[$KEEP_MINIMUM:] | .[] | select(.createdAt < \\"$CUTOFF\\") | .databaseId" \
-          | xargs -r -I{} gh run delete {} --repo "${{ github.repository }}"
+            | jq -r --arg cutoff "$CUTOFF" --argjson keep "$KEEP_MINIMUM" \
+                'sort_by(.createdAt) | reverse | .[$keep:] | .[] | select(.createdAt < $cutoff) | .databaseId' \
+            | xargs -r -I{} gh run delete {} --repo "${{ github.repository }}"

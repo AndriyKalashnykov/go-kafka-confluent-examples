@@ -4,7 +4,22 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.claude/**'
+      - '**.png'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.claude/**'
+      - '**.png'
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,6 +32,7 @@ jobs:
 
   setup:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       go-version: ${{ steps.go-version.outputs.version }}
     steps:
@@ -27,13 +43,13 @@ jobs:
         id: go-version
         run: |
           GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}' | cut -d. -f1,2)
-          echo "version=v${GO_VERSION}" >> $GITHUB_OUTPUT
+          echo "version=v${GO_VERSION}" >> "$GITHUB_OUTPUT"
 
-  staticcheck:
+  static-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Go
@@ -43,14 +59,10 @@ jobs:
           cache: true
 
       - name: Static check
-        uses: dominikh/staticcheck-action@9716614d4101e79b4340dd97b10e54d68234e431 # v1.4.1
-        with:
-          version: "latest"
-          install-go: false
-          cache-key: "latest"
+        run: make static-check
 
-  tests:
-    needs: [ setup, staticcheck ]
+  test:
+    needs: [setup, static-check]
     timeout-minutes: 20
     strategy:
       matrix:
@@ -59,8 +71,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: test (${{ matrix.name }}, ${{ matrix.os }})
     steps:
-
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Go
@@ -72,15 +83,15 @@ jobs:
       - name: Create temporary .env
         run: touch .env
 
-      - name: Run [${{ matrix.name }} - ${{ matrix.os }}] tests
+      - name: Test
         run: make test
 
-  builds:
-    needs: [ setup, staticcheck ]
+  build:
+    needs: [setup, static-check]
     timeout-minutes: 20
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     name: build (${{ matrix.os }})
 
@@ -99,128 +110,132 @@ jobs:
       - name: Create temporary .env
         run: touch .env
 
-      - name: Build [${{ matrix.os }}]
+      - name: Build
         run: make build
 
   release-binaries:
     if: github.ref_type == 'tag'
-    needs: [ setup, tests, staticcheck, builds ]
+    needs: [setup, test, static-check, build]
+    timeout-minutes: 30
     permissions:
       contents: write
-    strategy:
-      matrix:
-        os: [ ubuntu-latest]
-    runs-on:  ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        id: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
-      - name: Run GoReleaser Linux
+      - name: Run GoReleaser (Linux)
         run: |
           docker run \
-          		--rm \
-          		--privileged \
-          		-e CGO_ENABLED=1 \
-          		-e GITHUB_TOKEN \
-          		-v /var/run/docker.sock:/var/run/docker.sock \
-          		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-          		-w /go/src/$(PACKAGE_NAME) \
-          		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-          		--clean --config .goreleaser-Linux.yml
+              --rm \
+              --privileged \
+              -e CGO_ENABLED=1 \
+              -e GITHUB_TOKEN \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$(pwd)":"/go/src/${PACKAGE_NAME}" \
+              -w "/go/src/${PACKAGE_NAME}" \
+              "ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION}" \
+              --clean --config .goreleaser-Linux.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
           GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run GoReleaser MacOS
+      - name: Run GoReleaser (macOS)
         run: |
           docker run \
-          		--rm \
-          		--privileged \
-          		-e CGO_ENABLED=1 \
-          		-e GITHUB_TOKEN \
-          		-v /var/run/docker.sock:/var/run/docker.sock \
-          		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-          		-w /go/src/$(PACKAGE_NAME) \
-          		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-          		--clean --config .goreleaser-Darwin-cross.yml
+              --rm \
+              --privileged \
+              -e CGO_ENABLED=1 \
+              -e GITHUB_TOKEN \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$(pwd)":"/go/src/${PACKAGE_NAME}" \
+              -w "/go/src/${PACKAGE_NAME}" \
+              "ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION}" \
+              --clean --config .goreleaser-Darwin-cross.yml
         env:
           PACKAGE_NAME: github.com/AndriyKalashnykov/go-kafka-confluent-examples
           GOLANG_CROSS_VERSION: ${{ needs.setup.outputs.go-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  release-docker-images:
+  docker:
     if: github.ref_type == 'tag'
-    needs: [tests, staticcheck, builds]
+    needs: [test, static-check, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      with:
-        fetch-depth: 0
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-    - name: Convert owner to lower case
-      run: |
-        echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-      env:
-        OWNER: '${{ github.repository_owner }}'
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
 
-    - name: Login to image repository
-      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GH_ACCESS_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
 
-    - name: GitHub Tag Name example
-      run: |
-        echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-        echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
-      with:
-        images: ghcr.io/${{ env.OWNER_LC }}/kafka-confluent-go-consumer
-        flavor: latest=true
-        tags: |
-          type=ref,event=branch
-          type=ref,event=tag
-          type=ref,event=pr
-          type=semver,pattern=v{{version}}
-        labels: |
-          org.opencontainers.image.vendor=Andriy Kalashnykov - andriykalashnykov@gmail.com
-          org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
-          org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
-          org.opencontainers.image.licenses=MIT
-          org.opencontainers.image.version=${{  github.ref_name }}"
-          io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
-          io.artifacthub.package.maintainers=[{\"name\":\"Andriy Kalashnykov\",\"email\":\"andriykalashnykov@gmail.com\"}]
-          io.artifacthub.package.license=MIT
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push
-      id: docker_build
-      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
-      with:
-        context: .
-        file: ./Dockerfile.consumer
-        platforms: linux/amd64
-        push: true
-        provenance: false
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/kafka-confluent-go-consumer
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          labels: |
+            org.opencontainers.image.vendor=Andriy Kalashnykov - andriykalashnykov@gmail.com
+            org.opencontainers.image.title=Confluent Kafka Cloud Consumer in Go
+            org.opencontainers.image.description=Confluent Kafka Cloud Consumer in Go
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.version=${{ github.ref_name }}
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/AndriyKalashnykov/go-kafka-confluent-examples/main/README.md
+            io.artifacthub.package.maintainers=[{"name":"Andriy Kalashnykov","email":"andriykalashnykov@gmail.com"}]
+            io.artifacthub.package.license=MIT
 
-    - name: Output container image digest
-      run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        with:
+          context: .
+          file: ./Dockerfile.consumer
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output container image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
+  ci-pass:
+    if: always()
+    needs: [setup, static-check, test, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all required jobs passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All required jobs passed."

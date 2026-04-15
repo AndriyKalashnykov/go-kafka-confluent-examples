@@ -30,7 +30,7 @@ func ReadConfig(configFile string) kafka.ConfigMap {
 
 	m := make(map[string]kafka.ConfigValue)
 
-	file, err := os.Open(configFile)
+	file, err := os.Open(configFile) // #nosec G304 -- configFile sourced from trusted KAFKA_CONFIG_FILE env var
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open file: %s", err)
 		os.Exit(1)
