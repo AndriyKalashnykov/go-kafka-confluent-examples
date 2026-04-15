@@ -200,17 +200,21 @@ trivy-fs: deps-trivy
 #static-check: @ Composite quality gate (lint + sec + vulncheck + secrets + lint-ci + trivy-fs)
 static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs
 
-#test: @ Run tests
+#test: @ Run unit tests
 test: deps
-	@export GOFLAGS=$(GOFLAGS) && go test -race ./...
+	@export GOFLAGS=$(GOFLAGS) && go test -race -cover ./...
+
+#integration-test: @ Run integration tests (Testcontainers-backed; opt-in via -tags=integration)
+integration-test: deps
+	@export GOFLAGS=$(GOFLAGS) && go test -race -tags=integration -v ./...
 
 #build: @ Build producer and consumer binaries
 build: deps
 	@export GOPRIVATE=$(GOPRIVATE) GOFLAGS=$(GOFLAGS) CGO_ENABLED=1 && go build -o .bin/producer producer/producer.go
 	@export GOPRIVATE=$(GOPRIVATE) GOFLAGS=$(GOFLAGS) CGO_ENABLED=1 && go build -o .bin/consumer consumer/consumer.go
 
-#ci: @ Run all CI checks (static-check, test, build)
-ci: deps static-check test build
+#ci: @ Run all CI checks (static-check, test, integration-test, build)
+ci: deps static-check test integration-test build
 	@echo "Local CI pipeline passed."
 
 #ci-run: @ Run GitHub Actions workflow locally using act
@@ -321,7 +325,7 @@ renovate-validate: deps
 
 .PHONY: help deps deps-check deps-act deps-hadolint deps-govulncheck deps-gosec deps-gitleaks deps-actionlint deps-shellcheck deps-trivy \
 	clean format format-check deps-prune deps-prune-check \
-	lint vulncheck sec secrets lint-ci trivy-fs static-check test build ci ci-run \
+	lint vulncheck sec secrets lint-ci trivy-fs static-check test integration-test build ci ci-run \
 	update get release version \
 	consumer-image-build consumer-image-run consumer-image-stop \
 	kafka-run-producer kafka-run-consumer test-release \

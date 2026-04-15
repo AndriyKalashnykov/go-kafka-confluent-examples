@@ -140,7 +140,8 @@ Run `make help` to see all available targets.
 | Target | Description |
 |--------|-------------|
 | `make build` | Build producer and consumer binaries |
-| `make test` | Run tests with `-race` |
+| `make test` | Run unit tests with `-race -cover` |
+| `make integration-test` | Run integration tests (`go test -tags=integration`) |
 | `make format` | Format Go code (`gofmt -s -w .`) |
 | `make lint` | Run golangci-lint and hadolint |
 | `make static-check` | Composite quality gate (format-check, lint, lint-ci, sec, vulncheck, secrets, deps-prune-check) |

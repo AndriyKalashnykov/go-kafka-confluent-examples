@@ -99,8 +99,8 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 ## Upgrade Backlog
 
 - [ ] **Multi-arch Docker image** (`linux/arm64`) — requires CGO cross-compilation for `librdkafka` (cross-gcc, arm64 musl-dev, QEMU emulation). Non-trivial for CGO projects. Currently single-arch (`linux/amd64`). Other hardening gates (Trivy image scan, smoke test, cosign keyless signing) already applied in the `docker` job.
-- [ ] **Integration + e2e test coverage** — zero `*_test.go` files exist. Add Testcontainers-backed Kafka producer→consumer round-trip (integration), Docker Compose + KinD flows (e2e), and Makefile targets `integration-test` / `e2e` / `e2e-compose`. Run `/test-coverage-analysis` to generate stubs.
-- [ ] **Refactor producer/consumer `main()` into testable `Run(ctx, cfg)` functions** in `internal/` tree — precondition for unit-testing the core loops.
+- [ ] **Testcontainers-backed integration tests** (Kafka producer→consumer round-trip) — requires refactoring `producer/producer.go` and `consumer/consumer.go` `main()` into `Run(ctx, cfg)` functions in the `internal/` tree first. `make integration-test` target is wired up; currently runs same tests as `make test` since no `//go:build integration` files exist yet. Use `github.com/testcontainers/testcontainers-go/modules/kafka` (KRaft mode).
+- [ ] **E2E tests** — Docker Compose flow (`make e2e-compose` with a Kafka broker sidecar + SASL-free test fixture) and KinD flow (`make e2e` with a Kafka StatefulSet). Currently blocked on: (1) adding a broker to `docker-compose.yml` or a KinD-deployable Kafka manifest, (2) refactoring `main()` to accept overridable config paths for the test fixtures. Run `/test-coverage-analysis` for full Phase 4 generation.
 
 ## Skills
 
