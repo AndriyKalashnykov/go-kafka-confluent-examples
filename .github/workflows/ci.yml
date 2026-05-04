@@ -372,10 +372,13 @@ jobs:
       - name: Smoke test
         # Kafka consumer has no standalone mode; full boot requires a
         # broker. Verify the binary is present and executable instead.
+        # `file` is not in the minimal alpine runtime image, so the test
+        # relies on `test -x` only (sufficient — confirms the binary
+        # exists and is executable for the runtime user).
         run: |
           set -euo pipefail
           docker run --rm --entrypoint=/bin/sh kafka-confluent-go-consumer:scan \
-            -c 'test -x /consumer && file /consumer || exit 1'
+            -c 'test -x /consumer'
           echo "PASS: /consumer binary present and executable"
 
       - name: Log in to GHCR
