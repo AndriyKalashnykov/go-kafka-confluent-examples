@@ -291,12 +291,15 @@ jobs:
     # find binaries but no image (or vice versa). On non-tag pushes,
     # release-binaries is skipped (treated as success by `needs:`).
     needs: [changes, test, static-check, build, release-binaries]
-    # Explicit `if:` replaces the default success-of-all-needs check. Use
-    # `success()` so the chain still considers skipped needs (release-
-    # binaries is tag-only and is skipped on non-tag pushes — that's
-    # success-equivalent; failures and cancels still block).
+    # Explicit `if:` replaces the default success-of-all-needs check.
+    # `success()` is too strict here — it returns false when ANY need is
+    # skipped, including the tag-only `release-binaries` job that skips
+    # legitimately on non-tag pushes. Use `!failure() && !cancelled()`
+    # which evaluates true when no need failed/cancelled (skipped is
+    # neither, so it's accepted as the normal non-tag behaviour).
     if: |
-      success() && (github.ref_type == 'tag' || needs.changes.outputs.code == 'true')
+      !failure() && !cancelled() &&
+      (github.ref_type == 'tag' || needs.changes.outputs.code == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
