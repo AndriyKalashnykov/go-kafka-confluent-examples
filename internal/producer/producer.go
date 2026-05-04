@@ -37,13 +37,9 @@ type Config struct {
 	Out io.Writer
 }
 
-// Run creates a producer, emits NumMessages sample events to Topic, flushes,
-// drains delivery reports, and closes the producer. It returns early if ctx
-// is cancelled.
-func Run(ctx context.Context, cfg Config) error {
-	if cfg.Topic == "" {
-		return errors.New("producer: Topic is required")
-	}
+// applyDefaults fills zero-value fields with documented defaults. Pure;
+// no I/O. Run calls this before any kafka.Producer is constructed.
+func applyDefaults(cfg *Config) {
 	if cfg.NumMessages == 0 {
 		cfg.NumMessages = 10
 	}
@@ -53,10 +49,49 @@ func Run(ctx context.Context, cfg Config) error {
 	if len(cfg.Items) == 0 {
 		cfg.Items = defaultItems
 	}
-	out := cfg.Out
-	if out == nil {
-		out = io.Discard
+	if cfg.Out == nil {
+		cfg.Out = io.Discard
 	}
+}
+
+// produceFlusher is the minimal *kafka.Producer surface produceWithRetry
+// needs — defined locally so tests can substitute a fake without spinning
+// up a real Kafka client.
+type produceFlusher interface {
+	Produce(msg *kafka.Message, deliveryChan chan kafka.Event) error
+	Flush(timeoutMs int) int
+}
+
+// errQueueFullRetry is returned by produceWithRetry when the call should
+// be retried at the call site (after Flush has drained the local queue).
+// Treated as a sentinel — never wrapped, never propagated to callers.
+var errQueueFullRetry = errors.New("producer queue full; flushed and retrying")
+
+// produceWithRetry wraps a single Produce call. On ErrQueueFull it flushes
+// the local queue and signals a retry to the caller. Any other error is
+// logged to out and swallowed (matches the legacy best-effort semantics).
+// Returns nil on successful enqueue.
+func produceWithRetry(p produceFlusher, msg *kafka.Message, out io.Writer) error {
+	if err := p.Produce(msg, nil); err != nil {
+		var kErr kafka.Error
+		if errors.As(err, &kErr) && kErr.Code() == kafka.ErrQueueFull {
+			_, _ = fmt.Fprintln(out, "Producer queue full; flushing and retrying")
+			p.Flush(1000)
+			return errQueueFullRetry
+		}
+		_, _ = fmt.Fprintf(out, "Failed to produce message: %v\n", err)
+	}
+	return nil
+}
+
+// Run creates a producer, emits NumMessages sample events to Topic, flushes,
+// drains delivery reports, and closes the producer. It returns early if ctx
+// is cancelled.
+func Run(ctx context.Context, cfg Config) error {
+	if cfg.Topic == "" {
+		return errors.New("producer: Topic is required")
+	}
+	applyDefaults(&cfg)
 
 	p, err := kafka.NewProducer(&cfg.KafkaConfig)
 	if err != nil {
@@ -71,7 +106,7 @@ func Run(ctx context.Context, cfg Config) error {
 	go func() {
 		defer close(drainDone)
 		for e := range p.Events() {
-			handleEvent(out, e)
+			handleEvent(cfg.Out, e)
 		}
 	}()
 
@@ -82,26 +117,20 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		key := cfg.Users[rand.Intn(len(cfg.Users))]  // #nosec G404 -- sample data, not security-sensitive
 		data := cfg.Items[rand.Intn(len(cfg.Items))] // #nosec G404 -- sample data, not security-sensitive
-		if err := p.Produce(&kafka.Message{
+		msg := &kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 			Key:            []byte(key),
 			Value:          []byte(data),
-		}, nil); err != nil {
-			var kErr kafka.Error
-			if errors.As(err, &kErr) && kErr.Code() == kafka.ErrQueueFull {
-				_, _ = fmt.Fprintln(out, "Producer queue full; flushing and retrying")
-				p.Flush(1000)
-				n--
-				continue
-			}
-			_, _ = fmt.Fprintf(out, "Failed to produce message: %v\n", err)
+		}
+		if err := produceWithRetry(p, msg, cfg.Out); errors.Is(err, errQueueFullRetry) {
+			n--
 		}
 	}
 
 	// Flush waits for all queued messages to be delivered AND for the drain
 	// goroutine above to consume the resulting delivery reports.
 	for p.Flush(1000) > 0 {
-		_, _ = fmt.Fprintln(out, "Still waiting to flush outstanding messages")
+		_, _ = fmt.Fprintln(cfg.Out, "Still waiting to flush outstanding messages")
 		if err := ctx.Err(); err != nil {
 			break
 		}

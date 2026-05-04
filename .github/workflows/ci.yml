@@ -4,21 +4,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.claude/**'
-      - '**.png'
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.claude/**'
-      - '**.png'
   workflow_call:
 
 concurrency:
@@ -45,24 +31,70 @@ jobs:
           GO_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}' | cut -d. -f1,2)
           echo "version=v${GO_VERSION}" >> "$GITHUB_OUTPUT"
 
+  # `changes` is the path-filter detector. Heavy jobs (`static-check`,
+  # `test`, `integration-test`, `e2e-compose`, `e2e`, `build`) gate on
+  # `needs.changes.outputs.code == 'true'`. Doc-only PRs/pushes leave
+  # `code=false`; the heavy jobs report `result: 'skipped'`, which the
+  # `ci-pass` aggregator treats as success — required-status-checks
+  # under Repository Rulesets stay green without forcing every doc PR
+  # through the full pipeline. Trigger-level `paths-ignore` would
+  # deadlock with Rulesets (no run = no `ci-pass` status).
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed files
+        id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!**.md'
+              - '!docs/**'
+              - '!LICENSE'
+              - '!.gitignore'
+              - '!**.png'
+              - '!.claude/**'
+
   static-check:
+    needs: [changes]
+    if: success() && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Set up mise (Go + lint/security toolchain)
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          go-version-file: 'go.mod'
+          install: true
           cache: true
+
+      - name: Cache Go modules
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-
 
       - name: Static check
         run: make static-check
 
   test:
-    needs: [setup, static-check]
+    needs: [setup, changes, static-check]
+    if: success() && needs.changes.outputs.code == 'true'
     timeout-minutes: 20
     strategy:
       matrix:
@@ -74,11 +106,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Set up mise (Go + lint/security toolchain)
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          go-version-file: 'go.mod'
+          install: true
           cache: true
+
+      - name: Cache Go modules
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-
 
       - name: Create temporary .env
         run: touch .env
@@ -87,18 +129,29 @@ jobs:
         run: make test
 
   integration-test:
-    needs: [setup, static-check]
+    needs: [setup, changes, static-check]
+    if: success() && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Set up mise (Go + lint/security toolchain)
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          go-version-file: 'go.mod'
+          install: true
           cache: true
+
+      - name: Cache Go modules
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-
 
       - name: Create temporary .env
         run: touch .env
@@ -106,56 +159,9 @@ jobs:
       - name: Integration test
         run: make integration-test
 
-  e2e-compose:
-    needs: [setup, static-check]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: E2E compose
-        run: make e2e-compose
-
-  e2e:
-    needs: [setup, static-check]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: Install KinD + kubectl
-        env:
-          # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-          KIND_VERSION: v0.31.0
-          # renovate: datasource=github-releases depName=kubernetes/kubernetes
-          KUBECTL_VERSION: v1.35.3
-        run: |
-          set -euo pipefail
-          curl -fsSLo /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
-          chmod +x /tmp/kind
-          sudo mv /tmp/kind /usr/local/bin/kind
-          # kubectl is preinstalled on GitHub Actions ubuntu-latest but not
-          # in act's catthehacker/ubuntu:act-latest — install unconditionally
-          # so local (act) and remote (GitHub) both work.
-          curl -fsSLo /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-          chmod +x /tmp/kubectl
-          sudo mv /tmp/kubectl /usr/local/bin/kubectl
-          kind version
-          kubectl version --client
-
-      - name: E2E KinD
-        run: make e2e
-
   build:
-    needs: [setup, static-check]
+    needs: [setup, changes, static-check]
+    if: success() && needs.changes.outputs.code == 'true'
     timeout-minutes: 20
     strategy:
       matrix:
@@ -169,17 +175,60 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Set up mise (Go + lint/security toolchain)
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          go-version-file: 'go.mod'
+          install: true
           cache: true
+
+      - name: Cache Go modules
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-
 
       - name: Create temporary .env
         run: touch .env
 
       - name: Build
         run: make build
+
+  e2e-compose:
+    needs: [setup, changes, static-check, build, test]
+    if: success() && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: E2E compose
+        run: make e2e-compose
+
+  e2e:
+    needs: [setup, changes, static-check, build, test]
+    if: success() && needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Install KinD + kubectl
+        run: make kind-tools-install
+
+      - name: E2E KinD
+        run: make e2e
 
   release-binaries:
     if: github.ref_type == 'tag'
@@ -229,18 +278,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
-    if: github.ref_type == 'tag'
-    # Serialize after release-binaries so a tag either produces BOTH the
-    # GitHub Release tarballs AND the ghcr.io image, or neither — avoiding
-    # half-released tags where users pinning to v1.2.3 find binaries but no
-    # image (or vice versa). Trade-off: ~2-4 min longer wall time on tag.
-    needs: [test, static-check, build, release-binaries]
+    # Runs on every code-changing push (catches multi-arch build regressions
+    # + cosign installer breakage on the commit that introduced them, not
+    # release day). Step-level `if:` on Login / Push / Cosign install / Sign
+    # gates the tag-only behaviour; the multi-arch build itself runs every
+    # time as validation, with `push: ${{ startsWith(...) }}` deciding
+    # whether to publish.
+    #
+    # On tag pushes, serializes after release-binaries so a tag either
+    # produces BOTH the GitHub Release tarballs AND the ghcr.io image, or
+    # neither — avoiding half-released tags where users pinning to v1.2.3
+    # find binaries but no image (or vice versa). On non-tag pushes,
+    # release-binaries is skipped (treated as success by `needs:`).
+    needs: [changes, test, static-check, build, release-binaries]
+    # Explicit `if:` replaces the default success-of-all-needs check.
+    # `success()` is too strict here — it returns false when ANY need is
+    # skipped, including the tag-only `release-binaries` job that skips
+    # legitimately on non-tag pushes. Use `!failure() && !cancelled()`
+    # which evaluates true when no need failed/cancelled (skipped is
+    # neither, so it's accepted as the normal non-tag behaviour).
+    if: |
+      !failure() && !cancelled() &&
+      (github.ref_type == 'tag' || needs.changes.outputs.code == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: write
-      id-token: write  # cosign keyless OIDC signing
+      packages: write    # exercised only by the tag-gated push step
+      id-token: write    # exercised only by the tag-gated cosign sign step
 
     steps:
       - name: Checkout
@@ -258,9 +323,18 @@ jobs:
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/kafka-confluent-go-consumer
+          # Repo-namespace path (`<owner>/<repo>/<package>`). User-account
+          # repos require this shape for first-tag bootstrap because
+          # GITHUB_TOKEN cannot CREATE user-namespace packages
+          # (`ghcr.io/<owner>/<package>`) — only repo-namespace packages.
+          # Org accounts work either way; we use repo-namespace
+          # universally for portfolio consistency.
+          images: ghcr.io/${{ github.repository }}/kafka-confluent-go-consumer
+          # Only apply `latest` on tag pushes — on non-tag pushes the
+          # metadata still resolves cleanly (no `:latest` row in the tag
+          # set) and the publish step is skipped via step-level `if:`.
           flavor: |
-            latest=true
+            latest=${{ startsWith(github.ref, 'refs/tags/') }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -275,9 +349,6 @@ jobs:
             io.artifacthub.package.maintainers=[{"name":"Andriy Kalashnykov","email":"andriykalashnykov@gmail.com"}]
             io.artifacthub.package.license=MIT
 
-      # =================================================================
-      # GATE 1: Local single-arch build (for scanning + smoke testing)
-      # =================================================================
       - name: Build image for scan
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
@@ -289,9 +360,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # =================================================================
-      # GATE 2: Trivy image scan (CRITICAL/HIGH blocking)
-      # =================================================================
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
@@ -301,21 +369,20 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-      # =================================================================
-      # GATE 3: Smoke test — verify binary is present and executable
-      # (Kafka consumer has no standalone mode; full boot requires a broker)
-      # =================================================================
       - name: Smoke test
+        # Kafka consumer has no standalone mode; full boot requires a
+        # broker. Verify the binary is present and executable instead.
+        # `file` is not in the minimal alpine runtime image, so the test
+        # relies on `test -x` only (sufficient — confirms the binary
+        # exists and is executable for the runtime user).
         run: |
           set -euo pipefail
           docker run --rm --entrypoint=/bin/sh kafka-confluent-go-consumer:scan \
-            -c 'test -x /consumer && file /consumer || exit 1'
+            -c 'test -x /consumer'
           echo "PASS: /consumer binary present and executable"
 
-      # =================================================================
-      # All gates passed → publish (cosign-signed post-push)
-      # =================================================================
       - name: Log in to GHCR
+        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
@@ -332,7 +399,11 @@ jobs:
           # librdkafka links against per-arch Alpine packages, so the same
           # Dockerfile produces a correct binary for each TARGETARCH.
           platforms: linux/amd64,linux/arm64
-          push: true
+          # On non-tag pushes this is a build-only validation run (no
+          # registry push); on tag pushes it actually publishes. The
+          # multi-arch build runs every time so arm64 cross-compile
+          # regressions surface on the commit that introduced them.
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
           provenance: false  # Pattern A — keeps image index free of unknown/unknown entries so GHCR "OS / Arch" tab renders
           sbom: false        # Pattern A — cosign keyless signing below provides supply-chain verification
           tags: ${{ steps.meta.outputs.tags }}
@@ -340,13 +411,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # =================================================================
-      # Post-push: cosign keyless OIDC signing by digest
-      # =================================================================
       - name: Install cosign
+        if: startsWith(github.ref, 'refs/tags/')
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Sign image with cosign
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.push.outputs.digest }}
@@ -359,11 +429,22 @@ jobs:
           done <<< "${TAGS}"
 
       - name: Output container image digest
+        if: startsWith(github.ref, 'refs/tags/')
         run: echo "${{ steps.push.outputs.digest }}"
 
   ci-pass:
     if: always()
-    needs: [setup, static-check, test, integration-test, e2e-compose, e2e, build, release-binaries, docker]
+    needs:
+      - setup
+      - changes
+      - static-check
+      - test
+      - integration-test
+      - e2e-compose
+      - e2e
+      - build
+      - release-binaries
+      - docker
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

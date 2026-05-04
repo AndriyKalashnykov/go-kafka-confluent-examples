@@ -36,20 +36,14 @@ type Config struct {
 	Out io.Writer
 }
 
-// Run creates a consumer, subscribes to Topic, and reads messages until ctx is
-// cancelled or MaxMessages is reached. It always closes the consumer cleanly.
-func Run(ctx context.Context, cfg Config) error {
-	if cfg.Topic == "" {
-		return errors.New("consumer: Topic is required")
-	}
+// applyDefaults fills in zero-value fields with their documented defaults.
+// Pure: no I/O, no kafka.ConfigMap mutation. Run calls this first, then
+// applies the resulting GroupID / AutoOffsetReset to the embedded
+// kafka.ConfigMap (which DOES mutate the caller's map and is left in Run).
+func applyDefaults(cfg *Config) {
 	if cfg.GroupID == "" {
 		if _, ok := cfg.KafkaConfig["group.id"]; !ok {
 			cfg.GroupID = "kafka-go-getting-started"
-		}
-	}
-	if cfg.GroupID != "" {
-		if err := cfg.KafkaConfig.SetKey("group.id", cfg.GroupID); err != nil {
-			return fmt.Errorf("consumer: set group.id: %w", err)
 		}
 	}
 	if cfg.AutoOffsetReset == "" {
@@ -57,18 +51,31 @@ func Run(ctx context.Context, cfg Config) error {
 			cfg.AutoOffsetReset = "earliest"
 		}
 	}
+	if cfg.PollTimeout == 0 {
+		cfg.PollTimeout = 100 * time.Millisecond
+	}
+	if cfg.Out == nil {
+		cfg.Out = io.Discard
+	}
+}
+
+// Run creates a consumer, subscribes to Topic, and reads messages until ctx is
+// cancelled or MaxMessages is reached. It always closes the consumer cleanly.
+func Run(ctx context.Context, cfg Config) error {
+	if cfg.Topic == "" {
+		return errors.New("consumer: Topic is required")
+	}
+	applyDefaults(&cfg)
+
+	if cfg.GroupID != "" {
+		if err := cfg.KafkaConfig.SetKey("group.id", cfg.GroupID); err != nil {
+			return fmt.Errorf("consumer: set group.id: %w", err)
+		}
+	}
 	if cfg.AutoOffsetReset != "" {
 		if err := cfg.KafkaConfig.SetKey("auto.offset.reset", cfg.AutoOffsetReset); err != nil {
 			return fmt.Errorf("consumer: set auto.offset.reset: %w", err)
 		}
-	}
-	poll := cfg.PollTimeout
-	if poll == 0 {
-		poll = 100 * time.Millisecond
-	}
-	out := cfg.Out
-	if out == nil {
-		out = io.Discard
 	}
 
 	c, err := kafka.NewConsumer(&cfg.KafkaConfig)
@@ -77,26 +84,26 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	defer func() {
 		if err := c.Close(); err != nil {
-			_, _ = fmt.Fprintf(out, "Failed to close consumer: %v\n", err)
+			_, _ = fmt.Fprintf(cfg.Out, "Failed to close consumer: %v\n", err)
 		}
 	}()
 
 	if err := c.SubscribeTopics([]string{cfg.Topic}, nil); err != nil {
 		return fmt.Errorf("consumer: subscribe: %w", err)
 	}
-	_, _ = fmt.Fprintf(out, "Reading topic %v\n", cfg.Topic)
+	_, _ = fmt.Fprintf(cfg.Out, "Reading topic %v\n", cfg.Topic)
 
 	count := 0
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil
 		}
-		ev, err := c.ReadMessage(poll)
+		ev, err := c.ReadMessage(cfg.PollTimeout)
 		if err != nil {
 			// Timeout/transient errors — the underlying client retries.
 			continue
 		}
-		_, _ = fmt.Fprintf(out, "Consumed event from topic %s: key = %-10s value = %s\n",
+		_, _ = fmt.Fprintf(cfg.Out, "Consumed event from topic %s: key = %-10s value = %s\n",
 			*ev.TopicPartition.Topic, string(ev.Key), string(ev.Value))
 		count++
 		if cfg.MaxMessages > 0 && count >= cfg.MaxMessages {

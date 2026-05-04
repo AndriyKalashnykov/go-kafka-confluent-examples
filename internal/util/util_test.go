@@ -3,6 +3,7 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -77,7 +78,10 @@ func TestReadConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			got := ReadConfig(path)
+			got, err := ReadConfig(path)
+			if err != nil {
+				t.Fatalf("ReadConfig(%q): %v", path, err)
+			}
 			if len(got) != len(tt.want) {
 				t.Fatalf("len(ReadConfig) = %d, want %d — got: %v", len(got), len(tt.want), got)
 			}
@@ -100,9 +104,22 @@ func TestReadConfig_EmptyFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got := ReadConfig(path)
+	got, err := ReadConfig(path)
+	if err != nil {
+		t.Fatalf("ReadConfig(empty): %v", err)
+	}
 	if len(got) != 0 {
 		t.Errorf("empty file: got %v, want empty map", got)
+	}
+}
+
+func TestReadConfig_FileNotFound(t *testing.T) {
+	_, err := ReadConfig(filepath.Join(t.TempDir(), "does-not-exist.properties"))
+	if err == nil {
+		t.Fatal("ReadConfig(missing): want error, got nil")
+	}
+	if !strings.Contains(err.Error(), "open") {
+		t.Errorf("error message %q does not mention open()", err.Error())
 	}
 }
 
@@ -123,3 +140,59 @@ func TestConstants(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildKafkaConfigMap(t *testing.T) {
+	dir := t.TempDir()
+	props := filepath.Join(dir, "kafka.properties")
+	if err := os.WriteFile(props, []byte("bootstrap.servers=broker:9092\nsecurity.protocol=SASL_SSL\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("happy path merges file + env credentials", func(t *testing.T) {
+		env := mapLookup{
+			KafkaConfigFileEnv: props,
+			SaslUserNameEnv:    "user-key",
+			SaslPwdEnv:         "user-secret",
+			KafkaTopicEnv:      "demo",
+		}
+		conf, topic, err := BuildKafkaConfigMap(env.Get)
+		if err != nil {
+			t.Fatalf("BuildKafkaConfigMap: %v", err)
+		}
+		if topic != "demo" {
+			t.Errorf("topic = %q, want %q", topic, "demo")
+		}
+		// File-sourced
+		if got, _ := conf.Get("bootstrap.servers", ""); got != "broker:9092" {
+			t.Errorf("bootstrap.servers = %q, want %q", got, "broker:9092")
+		}
+		// Env-sourced
+		if got, _ := conf.Get(SaslUserName, ""); got != "user-key" {
+			t.Errorf("%s = %q, want %q", SaslUserName, got, "user-key")
+		}
+		if got, _ := conf.Get(SaslPwd, ""); got != "user-secret" {
+			t.Errorf("%s = %q, want %q", SaslPwd, got, "user-secret")
+		}
+	})
+
+	t.Run("missing config-file env returns error", func(t *testing.T) {
+		env := mapLookup{}
+		_, _, err := BuildKafkaConfigMap(env.Get)
+		if err == nil || !strings.Contains(err.Error(), KafkaConfigFileEnv) {
+			t.Fatalf("err = %v, want error mentioning %s", err, KafkaConfigFileEnv)
+		}
+	})
+
+	t.Run("nonexistent config file surfaces open error", func(t *testing.T) {
+		env := mapLookup{KafkaConfigFileEnv: filepath.Join(dir, "missing.properties")}
+		_, _, err := BuildKafkaConfigMap(env.Get)
+		if err == nil || !strings.Contains(err.Error(), "open") {
+			t.Fatalf("err = %v, want open() error", err)
+		}
+	})
+}
+
+// mapLookup is a tiny test helper that satisfies EnvLookup from a map.
+type mapLookup map[string]string
+
+func (m mapLookup) Get(key string) string { return m[key] }

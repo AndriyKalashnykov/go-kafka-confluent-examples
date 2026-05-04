@@ -10,8 +10,16 @@
     "github-actions",
     "dockerfile",
     "docker-compose",
+    "kubernetes",
+    "mise",
     "custom.regex"
   ],
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^k8s/.+\\.ya?ml$/",
+      "/^e2e/k8s/.+\\.ya?ml$/"
+    ]
+  },
   "postUpdateOptions": [
     "gomodTidy"
   ],
@@ -31,6 +39,14 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)( versioning=(?<versioning>[^\\s]+))?\\n\\s+[A-Z_]+:\\s*(?<currentValue>\\S+)"
       ]
+    },
+    {
+      "customType": "regex",
+      "description": "Update inline-pinned tool versions in shell scripts via renovate comments (KIND_VERSION/KUBECTL_VERSION in scripts/kind-tools-install.sh, etc.)",
+      "managerFilePatterns": ["/^scripts/.*\\.sh$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)( versioning=(?<versioning>[^\\s]+))?\\n[A-Z_]+=\"\\$\\{[A-Z_]+:-(?<currentValue>[^}]+)\\}\""
+      ]
     }
   ],
   "commitMessagePrefix": "chore(all): ",
@@ -43,7 +59,7 @@
   "prHourlyLimit": 0,
   "platformAutomerge": true,
   "automerge": true,
-  "automergeType": "branch",
+  "automergeType": "pr",
   "automergeStrategy": "squash",
   "ignoreTests": false,
   "vulnerabilityAlerts": {
@@ -91,6 +107,24 @@
         "docker"
       ],
       "groupName": "Docker dependencies"
+    },
+    {
+      "description": "Group mise-managed lint and security scanners (golangci-lint, gosec, gitleaks, hadolint, trivy, actionlint, shellcheck, govulncheck, act)",
+      "matchManagers": [
+        "mise"
+      ],
+      "matchPackageNames": [
+        "/golangci-lint/",
+        "/gosec/",
+        "/gitleaks/",
+        "/hadolint/",
+        "/trivy/",
+        "/actionlint/",
+        "/shellcheck/",
+        "/govulncheck/",
+        "/nektos\\/act/"
+      ],
+      "groupName": "mise lint & security tools"
     }
   ]
 }

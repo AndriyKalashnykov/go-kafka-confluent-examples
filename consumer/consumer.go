@@ -1,3 +1,7 @@
+// Consumer entrypoint. The thin shell here delegates env-var translation
+// to internal/util.BuildKafkaConfigMap (testable, returns errors instead
+// of os.Exit), wires SIGINT/SIGTERM to ctx-cancel, and hands off to
+// internal/consumer.Run (testable, driven by ctx + Config).
 package main
 
 import (
@@ -12,16 +16,16 @@ import (
 )
 
 func main() {
-	configFile := util.ReadEnvVar(util.KafkaConfigFileEnv)
-	conf := util.ReadConfig(configFile)
-
-	if err := conf.SetKey(util.SaslUserName, util.ReadEnvVar(util.SaslUserNameEnv)); err != nil {
-		fmt.Printf("Failed to set %s: %s\n", util.SaslUserName, err)
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if err := conf.SetKey(util.SaslPwd, util.ReadEnvVar(util.SaslPwdEnv)); err != nil {
-		fmt.Printf("Failed to set %s: %s\n", util.SaslPwd, err)
-		os.Exit(1)
+}
+
+func run() error {
+	conf, topic, err := util.BuildKafkaConfigMap(os.Getenv)
+	if err != nil {
+		return fmt.Errorf("consumer: build config: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -35,13 +39,9 @@ func main() {
 		cancel()
 	}()
 
-	topic := util.ReadEnvVar(util.KafkaTopicEnv)
-	if err := consumer.Run(ctx, consumer.Config{
+	return consumer.Run(ctx, consumer.Config{
 		KafkaConfig: conf,
 		Topic:       topic,
 		Out:         os.Stdout,
-	}); err != nil {
-		fmt.Printf("Consumer failed: %s\n", err)
-		os.Exit(1)
-	}
+	})
 }

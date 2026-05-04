@@ -21,12 +21,14 @@ C4Context
   UpdateLayoutConfig($c4ShapeInRow="3")
 ```
 
+A developer builds the producer and consumer binaries (or the consumer container image) and points them at a Confluent Cloud cluster. Authentication is SASL/PLAIN over TLS on port 9092; credentials live in `.env` locally and in a Kubernetes `Secret` when deployed.
+
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
 | Language | Go 1.26.2 |
-| Kafka client | [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go) v2.14.0 |
+| Kafka client | [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go) v2.14.1 |
 | Native library | `librdkafka` (CGO-linked) |
 | Build | Make, GoReleaser (cross-compilation) |
 | Container | Docker, Docker Compose |
@@ -80,8 +82,8 @@ C4Container
   Person(dev, "Developer / Operator")
 
   System_Boundary(sys, "go-kafka-confluent-examples") {
-    Container(producer, "Producer", "Go 1.26, confluent-kafka-go v2.14 (CGO + librdkafka)", "Publishes messages to test-topic")
-    Container(consumer, "Consumer", "Go 1.26, confluent-kafka-go v2.14 (CGO + librdkafka)", "Subscribes and logs messages")
+    Container(producer, "Producer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Publishes messages to test-topic")
+    Container(consumer, "Consumer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Subscribes and logs messages")
     Container(cm, "ConfigMap", "Kubernetes", "kafka.properties — bootstrap server, SASL mechanism")
     Container(secret, "Secret", "Kubernetes", "API key and secret for SASL/PLAIN auth")
   }
@@ -98,7 +100,7 @@ C4Container
   Rel(consumer, topic, "Consumes", "Kafka / SASL_SSL")
 ```
 
-- **Producer** / **Consumer** — statically-linked Go binaries; both depend on `librdkafka` via CGO (see [`Dockerfile.consumer`](Dockerfile.consumer) for the Alpine build chain)
+- **Producer** / **Consumer** — statically-linked Go binaries; both depend on `librdkafka` via CGO (see [`Dockerfile.consumer`](Dockerfile.consumer) and [`Dockerfile.producer`](Dockerfile.producer) for the Alpine build chain). The producer is a one-shot CLI (publishes `NUM_MESSAGES` then exits); the consumer is a long-running subscriber.
 - **ConfigMap** holds non-secret Kafka client settings (`bootstrap.servers`, `security.protocol`, `sasl.mechanism`); **Secret** holds the API key/secret pair — both are mounted into the consumer pod by `k8s/deployment.yaml`
 - **Confluent Cloud Topic** is external; authentication is SASL/PLAIN over TLS
 
@@ -124,6 +126,8 @@ sequenceDiagram
   CC-->>C: Message batch
   C->>CC: Commit offset
 ```
+
+Bootstrap loads `kafka.properties` + `.env` for SASL_SSL credentials. The producer connects, authenticates, publishes a key/value pair, and waits for the broker's delivery report (ack). The consumer connects with the same credentials, receives partition assignments from the consumer-group coordinator, polls for message batches, and commits offsets after processing.
 
 Source diagrams live inline in this README; lint via `make mermaid-lint` (pinned [`minlag/mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) Docker image).
 
@@ -215,9 +219,10 @@ Run `make help` to see all available targets.
 | `make build` | Build producer and consumer binaries |
 | `make test` | Run unit tests with `-race -cover` |
 | `make integration-test` | Run integration tests (`go test -tags=integration`) |
-| `make e2e-compose` | Run E2E via Docker Compose (PLAINTEXT Kafka broker + consumer image; real produce → consume round-trip) |
-| `make e2e` | Run E2E via KinD cluster (in-cluster Kafka + real `k8s/*.yaml` manifests, PLAINTEXT overrides) |
+| `make e2e-compose` | Run E2E via Docker Compose — PLAINTEXT Kafka broker + **both** binary images (`Dockerfile.consumer` long-lived + `Dockerfile.producer` one-shot); real produce → consume round-trip |
+| `make e2e` | Run E2E via KinD cluster (in-cluster Kafka + real `k8s/*.yaml` manifests, PLAINTEXT overrides; kubectl context pinned to `kind-kafka-e2e` for multi-session safety) |
 | `make format` | Format Go code (`gofmt -s -w .`) |
+| `make format-check` | Verify code is formatted (CI gate) |
 | `make lint` | Run golangci-lint and hadolint |
 | `make static-check` | Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
 | `make clean` | Remove build artifacts |
@@ -231,6 +236,7 @@ Run `make help` to see all available targets.
 | `make deps` | Install and verify required toolchain (mise + Go) |
 | `make deps-check` | Show required Go version and mise status |
 | `make deps-prune` | Run `go mod tidy` |
+| `make deps-prune-check` | Verify go.mod and go.sum are clean (CI gate) |
 | `make get` | Download and install dependency packages |
 | `make update` | Update dependency packages to latest versions |
 
@@ -283,15 +289,16 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | Job | Triggers | Steps |
 |-----|----------|-------|
 | `setup` | push, PR | Extract Go version from `go.mod` for downstream jobs |
-| `static-check` | push, PR | `make static-check` composite (lint + sec + vulncheck + secrets + lint-ci + trivy-fs) |
-| `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
-| `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
-| `e2e-compose` | push, PR | `make e2e-compose` (Docker Compose with PLAINTEXT broker; ubuntu-latest) |
-| `e2e` | push, PR | `make e2e` (KinD cluster + in-cluster Kafka + real `k8s/` manifests; ubuntu-latest) |
-| `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
-| `ci-pass` | always | Aggregator for branch protection |
+| `changes` | push, PR | [`dorny/paths-filter`](https://github.com/dorny/paths-filter) — emits `code=true` unless the diff is doc-only (`**.md`, `docs/**`, `LICENSE`, `**.png`, `.claude/**`). Heavy jobs gate on `needs.changes.outputs.code == 'true'` so doc-only PRs skip the pipeline while still satisfying the `ci-pass` required check |
+| `static-check` | push, PR (when code changes) | `make static-check` composite (lint + sec + vulncheck + secrets + lint-ci + trivy-fs + mermaid-lint) |
+| `test` | push, PR (when code changes) | Unit tests (matrix: ubuntu-latest + macos-latest) |
+| `integration-test` | push, PR (when code changes) | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
+| `e2e-compose` | push, PR (when code changes) | `make e2e-compose` (Docker Compose with PLAINTEXT broker; ubuntu-latest) |
+| `e2e` | push, PR (when code changes) | `make e2e` (KinD cluster + in-cluster Kafka + real `k8s/` manifests; ubuntu-latest) |
+| `build` | push, PR (when code changes) | Matrix: ubuntu-latest + macos-latest |
+| `ci-pass` | always | Aggregator for branch protection — passes when all upstream jobs are `success` or `skipped` |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | tags only | Multi-arch (`linux/amd64,linux/arm64`) build, Trivy scan, smoke test, push to `ghcr.io`, cosign sign |
+| `docker` | every code-changing push (publish gated to tags) | Build single-arch for scan → Trivy image scan → smoke test → multi-arch validation build (push gated by tag) → cosign sign (tag only). Runs every code push so multi-arch cross-compile regressions and cosign installer breakage surface on the commit that introduced them, not release day |
 
 ### Required Secrets and Variables
 
@@ -323,7 +330,7 @@ Buildkit in-manifest attestations (`provenance` + `sbom`) are disabled so the im
 Verify a published image's signature:
 
 ```bash
-cosign verify ghcr.io/andriykalashnykov/kafka-confluent-go-consumer:<tag> \
+cosign verify ghcr.io/andriykalashnykov/go-kafka-confluent-examples/kafka-confluent-go-consumer:<tag> \
   --certificate-identity-regexp 'https://github\.com/AndriyKalashnykov/go-kafka-confluent-examples/.+' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
