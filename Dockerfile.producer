@@ -1,0 +1,29 @@
+# docker buildx build --platform linux/arm64 --file Dockerfile.producer -t kafka-confluent-go-producer:latest .
+# https://hub.docker.com/_/golang/tags
+FROM golang:1.26.2-alpine@sha256:c2a1f7b2095d046ae14b286b18413a05bb82c9bca9b25fe7ff5efef0f0826166 AS builder
+
+# librdkafka build deps mirror Dockerfile.consumer — both binaries link
+# against the same native library and need the same Alpine packages.
+RUN apk add --no-cache \
+      mold musl-dev librdkafka-dev ca-certificates git gcc g++ libtool libc-dev pkgconf \
+      build-base coreutils make rpm wget curl cyrus-sasl-dev libevent libsasl lz4-dev \
+      openssh openssl openssl-dev yajl-dev zlib-dev
+
+WORKDIR /app
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=1 GOOS=linux CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o producer producer/producer.go
+
+FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS runtime
+WORKDIR /
+# Same runtime shared libs as the consumer image: libgcc + librdkafka +
+# cyrus-sasl, plus ca-certificates for SASL_SSL bootstrap to a public broker.
+RUN apk add --no-cache libgcc librdkafka cyrus-sasl ca-certificates
+RUN addgroup -g 1000 srvgroup && adduser -D srvuser -u 1000 -G srvgroup
+COPY --from=builder /app/producer /
+USER srvuser:srvgroup
+# The producer is a one-shot CLI — it publishes NumMessages messages and
+# exits with code 0. No port exposed.
+ENTRYPOINT [ "./producer" ]

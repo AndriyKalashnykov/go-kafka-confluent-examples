@@ -1,11 +1,17 @@
 # E2E fixture: Apache Kafka in KRaft mode (PLAINTEXT, no SASL) + the
-# consumer image built from Dockerfile.consumer. A test harness produces
-# messages via kafka-console-producer.sh inside the broker container and
-# asserts the consumer logs "Consumed event from topic e2e-topic" 5 times.
+# consumer image built from Dockerfile.consumer + a one-shot producer
+# image built from Dockerfile.producer.
+#
+# Test harness: e2e-compose-test.sh runs `compose run --rm producer`
+# against an already-running consumer + broker, then asserts the consumer
+# logs "Consumed event from topic e2e-topic" N times. This exercises BOTH
+# binaries' boot/connect/produce-or-consume paths — the previous version
+# only exercised the consumer because messages were produced via
+# kafka-console-producer.sh (which bypasses producer.Run + Dockerfile.producer).
 #
 # Not for production: advertised listener is hardcoded to "kafka:9092"
 # (the service DNS name on the compose network), and replication factors
-# are 1. See e2e/e2e-compose-test.sh for the harness.
+# are 1.
 services:
   kafka:
     image: apache/kafka:3.9.0
@@ -51,6 +57,32 @@ services:
       # librdkafka ignores SASL settings when security.protocol=PLAINTEXT,
       # but consumer/main.go sets them unconditionally — provide non-empty
       # placeholders so SetKey doesn't reject empty strings.
+      SASL_USERNAME: unused
+      SASL_PASSWORD: unused
+    volumes:
+      - ./kafka.properties:/kafka.properties:ro
+    networks:
+      - e2e_net
+
+  # One-shot producer: publishes N messages from the producer/producer.go
+  # binary, then exits 0. Invoked by the harness via `compose run --rm
+  # producer`. Not started by `compose up` (no `command` / no `restart`),
+  # which keeps `depends_on: kafka (healthy)` from blocking the consumer
+  # rollout while the harness is still bringing the topic online.
+  producer:
+    image: kafka-confluent-go-producer:e2e
+    container_name: e2e-producer
+    pull_policy: build
+    profiles: [producer]
+    build:
+      dockerfile: Dockerfile.producer
+      context: ..
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CONFIG_FILE: /kafka.properties
+      KAFKA_TOPIC: e2e-topic
       SASL_USERNAME: unused
       SASL_PASSWORD: unused
     volumes:

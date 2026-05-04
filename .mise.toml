@@ -1,3 +1,12 @@
 [tools]
 go = "1.26.2"
 node = "24"
+"aqua:golangci/golangci-lint" = "2.11.4"
+"aqua:nektos/act" = "0.2.87"
+"aqua:hadolint/hadolint" = "2.14.0"
+"aqua:securego/gosec" = "2.25.0"
+"aqua:gitleaks/gitleaks" = "8.30.1"
+"aqua:rhysd/actionlint" = "1.7.12"
+"aqua:koalaman/shellcheck" = "0.11.0"
+"aqua:aquasecurity/trivy" = "0.69.3"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.2.0"

@@ -1,0 +1,30 @@
+# Without a .dockerignore, `docker build` ships the entire repo to BuildKit
+# (including .git/, large local artifacts, and any local .env/credentials),
+# which slows every build, fragments layer caching, and risks leaking
+# secrets into intermediate layers. Keep this list minimal — Go's `go
+# build` happily ignores files it doesn't need; the only items that
+# MUST be excluded are credentials and large irrelevant trees.
+
+# Version control history (~unbounded growth)
+.git/
+
+# Local build artifacts
+.bin/
+dist/
+
+# IDE / editor
+.idea/
+.vscode/
+
+# Claude Code harness scratch
+.claude/
+
+# Local env / credentials — never ship into a build context
+.env
+.env.*
+
+# Rendered Kafka client config (contains live API keys when populated)
+kafka.properties
+
+# Mise / version-manager runtime state
+.mise/

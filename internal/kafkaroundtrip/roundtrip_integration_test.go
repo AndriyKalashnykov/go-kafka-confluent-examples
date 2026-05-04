@@ -96,6 +96,92 @@ func TestProducerConsumerRoundTrip(t *testing.T) {
 	}
 }
 
+// TestConsumer_CtxCancelExitsCleanly verifies that consumer.Run returns nil
+// when its context is cancelled before any message arrives. Pre-cancels the
+// ctx, subscribes to a fresh topic with no messages, and asserts Run exits
+// within a short deadline. Catches regressions where the loop accidentally
+// blocks on ReadMessage instead of checking ctx.Err().
+func TestConsumer_CtxCancelExitsCleanly(t *testing.T) {
+	ctx := context.Background()
+
+	bootstrap, terminate := startKafka(t, ctx)
+	defer terminate()
+
+	const idleTopic = "idle-topic"
+	createTopic(t, ctx, bootstrap, idleTopic)
+
+	consumerCtx, consumerCancel := context.WithCancel(ctx)
+	consumerCancel() // pre-cancelled — Run should exit on the first ctx.Err() check
+
+	done := make(chan error, 1)
+	go func() {
+		done <- consumer.Run(consumerCtx, consumer.Config{
+			KafkaConfig: kafka.ConfigMap{"bootstrap.servers": bootstrap},
+			Topic:       idleTopic,
+			GroupID:     "ctx-cancel-test",
+			PollTimeout: 50 * time.Millisecond,
+		})
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Run returned %v on pre-cancelled ctx; want nil", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Run did not exit within 10s after ctx cancellation")
+	}
+}
+
+// TestConsumer_MaxMessagesEarlyReturn verifies that Run returns after
+// MaxMessages have been consumed even when more messages remain available.
+// Produces N+5 events and asks the consumer for N — Run must stop at N
+// without continuing to drain the topic.
+func TestConsumer_MaxMessagesEarlyReturn(t *testing.T) {
+	ctx := context.Background()
+
+	bootstrap, terminate := startKafka(t, ctx)
+	defer terminate()
+
+	const cappedTopic = "capped-topic"
+	createTopic(t, ctx, bootstrap, cappedTopic)
+
+	const want = 3
+	const produced = want + 5
+	producerCtx, producerCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer producerCancel()
+	if err := producer.Run(producerCtx, producer.Config{
+		KafkaConfig: kafka.ConfigMap{"bootstrap.servers": bootstrap},
+		Topic:       cappedTopic,
+		NumMessages: produced,
+		Users:       []string{"alice"},
+		Items:       []string{"widget"},
+		Out:         &syncBuffer{},
+	}); err != nil {
+		t.Fatalf("producer.Run: %v", err)
+	}
+
+	consumerOut := &syncBuffer{}
+	consumerCtx, consumerCancel := context.WithTimeout(ctx, consumeTimeout)
+	defer consumerCancel()
+	if err := consumer.Run(consumerCtx, consumer.Config{
+		KafkaConfig: kafka.ConfigMap{"bootstrap.servers": bootstrap},
+		Topic:       cappedTopic,
+		GroupID:     "max-messages-test",
+		MaxMessages: want,
+		PollTimeout: 100 * time.Millisecond,
+		Out:         consumerOut,
+	}); err != nil {
+		t.Fatalf("consumer.Run: %v", err)
+	}
+
+	got := strings.Count(consumerOut.String(), "Consumed event from topic "+cappedTopic)
+	if got != want {
+		t.Errorf("consumed %d events, want exactly %d (MaxMessages cap); output:\n%s",
+			got, want, consumerOut.String())
+	}
+}
+
 // startKafka boots an Apache Kafka broker in KRaft mode. The container's
 // entrypoint is overridden to block until a /tmp/advertised.env file is
 // written with KAFKA_ADVERTISED_LISTENERS pointing to the Testcontainers-
