@@ -16,11 +16,14 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux CGO_LDFLAGS="-fuse-ld=mold -lsasl2" go build -tags musl --ldflags "-w -s" -a -o producer producer/producer.go
 
-FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS runtime
+FROM alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS runtime
 WORKDIR /
 # Same runtime shared libs as the consumer image: libgcc + librdkafka +
 # cyrus-sasl, plus ca-certificates for SASL_SSL bootstrap to a public broker.
-RUN apk add --no-cache libgcc librdkafka cyrus-sasl ca-certificates
+# `apk upgrade` covers CVEs patched after the pinned base image was built
+# — see Dockerfile.consumer for the full rationale.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache libgcc librdkafka cyrus-sasl ca-certificates
 RUN addgroup -g 1000 srvgroup && adduser -D srvuser -u 1000 -G srvgroup
 COPY --from=builder /app/producer /
 USER srvuser:srvgroup
