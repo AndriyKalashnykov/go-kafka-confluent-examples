@@ -4,9 +4,8 @@
 # ubuntu-latest image preinstalls kubectl, but act's catthehacker runner
 # does not — install unconditionally for parity).
 #
-# Versions are pinned via inline `# renovate:` comments below; the same
-# constants are mirrored as step-env in .github/workflows/ci.yml so that
-# Renovate's customManagers regex covers BOTH locations.
+# Versions are pinned via the inline `# renovate:` comments below and
+# tracked by the `scripts/*.sh` customManagers regex in renovate.json.
 set -euo pipefail
 
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind

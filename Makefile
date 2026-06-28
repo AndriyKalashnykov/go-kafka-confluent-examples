@@ -7,13 +7,16 @@ SHELL := /bin/bash
 # still hand-installed.
 export PATH := $(HOME)/.local/share/mise/shims:$(HOME)/.local/bin:$(PATH)
 
-CONSUMER_IMG ?= kafka-confluent-go-consumer:v0.0.61
-CURRENTTAG := $(shell git describe --tags --abbrev=0)
+# `2>/dev/null || echo v0.0.0` keeps shallow/tagless CI checkouts (actions/checkout
+# default fetch-depth:1 fetches no tags) from printing "fatal: No names found,
+# cannot describe anything." on every make invocation; falls back to v0.0.0.
+CURRENTTAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)
+CONSUMER_IMG ?= kafka-confluent-go-consumer:$(CURRENTTAG)
 GOFLAGS = -mod=mod
 GOPRIVATE = github.com/AndriyKalashnykov/go-kafka-confluent-examples
+GOPATH ?= $(shell go env GOPATH)
 OS ?= $(shell uname -s | tr A-Z a-z)
 ENVFILE = ./.env
-OSXCROSS_PATH = /opt/osxcross-clang-17.0.3-macosx-14.0/target/bin
 
 # === Tool versions managed by mise (.mise.toml) ===
 # golangci-lint, act, hadolint, gosec, gitleaks, actionlint, shellcheck,
@@ -138,8 +141,22 @@ mermaid-lint:
 	done; \
 	echo "Mermaid parse OK: $$files"
 
-#static-check: @ Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
-static-check: format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs mermaid-lint
+#check-toolchain-alignment: @ Verify the Go version matches across go.mod, .mise.toml, and both Dockerfiles (prevents Renovate split-PR deadlock)
+check-toolchain-alignment:
+	@set -e; \
+	gomod=$$(grep -oP '^go \K[0-9]+\.[0-9]+\.[0-9]+' go.mod); \
+	mise=$$(grep -oP '^go\s*=\s*"\K[0-9]+\.[0-9]+\.[0-9]+' .mise.toml); \
+	dconsumer=$$(grep -oP 'FROM golang:\K[0-9]+\.[0-9]+\.[0-9]+' Dockerfile.consumer); \
+	dproducer=$$(grep -oP 'FROM golang:\K[0-9]+\.[0-9]+\.[0-9]+' Dockerfile.producer); \
+	if [ "$$gomod" != "$$mise" ] || [ "$$gomod" != "$$dconsumer" ] || [ "$$gomod" != "$$dproducer" ]; then \
+		echo "ERROR: Go toolchain versions disagree:"; \
+		printf "  %-22s %s\n" go.mod "$$gomod" .mise.toml "$$mise" Dockerfile.consumer "$$dconsumer" Dockerfile.producer "$$dproducer"; \
+		exit 1; \
+	fi; \
+	echo "Go toolchain aligned: $$gomod"
+
+#static-check: @ Composite quality gate (check-toolchain-alignment + format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
+static-check: check-toolchain-alignment format-check deps-prune-check lint lint-ci sec vulncheck secrets trivy-fs mermaid-lint
 
 #test: @ Run unit tests
 test: deps
@@ -274,15 +291,18 @@ k8s-undeploy:
 
 #renovate-validate: @ Validate Renovate configuration
 renovate-validate: deps
+	@# `renovate@latest` (NOT bare `renovate`) — npx caches the resolved
+	@# binary ~forever; without @latest a months-stale cached binary can
+	@# reject the current config schema (e.g. managerFilePatterns).
 	@if [ -n "$$GH_ACCESS_TOKEN" ]; then \
-		GITHUB_COM_TOKEN=$$GH_ACCESS_TOKEN npx --yes renovate --platform=local; \
+		GITHUB_COM_TOKEN=$$GH_ACCESS_TOKEN npx --yes renovate@latest --platform=local; \
 	else \
 		echo "Warning: GH_ACCESS_TOKEN not set, some dependency lookups may fail"; \
-		npx --yes renovate --platform=local; \
+		npx --yes renovate@latest --platform=local; \
 	fi
 
 .PHONY: help deps deps-check deps-prune deps-prune-check \
-	clean format format-check \
+	clean format format-check check-toolchain-alignment \
 	lint vulncheck sec secrets lint-ci trivy-fs mermaid-lint static-check \
 	test integration-test e2e-compose e2e build ci ci-run kind-tools-install \
 	update get release version \

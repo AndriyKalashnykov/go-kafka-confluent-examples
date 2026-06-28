@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://app.renovatebot.com/dashboard#github/AndriyKalashnykov/go-kafka-confluent-examples)
 
-# Go producer & consumer examples for Confluent Kafka Cloud
+# Go producer & consumer examples for Confluent Cloud Kafka
 
-Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS.
+Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS — validated by a three-layer test pyramid (unit, Testcontainers integration, KinD + Compose e2e) and a supply-chain–hardened GitHub Actions pipeline (Trivy image scan, cosign keyless OIDC signing).
 
 ```mermaid
 C4Context
@@ -27,7 +27,7 @@ A developer builds the producer and consumer binaries (or the consumer container
 
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.26.2 |
+| Language | Go 1.26.4 |
 | Kafka client | [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go) v2.14.1 |
 | Native library | `librdkafka` (CGO-linked) |
 | Build | Make, GoReleaser (cross-compilation) |
@@ -54,7 +54,7 @@ make kafka-run-consumer    # run consumer
 |------|---------|---------|-------------------|
 | [GNU Make](https://www.gnu.org/software/make/) | 3.81+ | Build orchestration | — |
 | [mise](https://mise.jdx.dev) | latest | Go + Node version management | `make deps` |
-| [Go](https://go.dev/dl/) | 1.26.2 (from `go.mod`) | Language runtime and compiler | `make deps` (via mise + `.mise.toml`) |
+| [Go](https://go.dev/dl/) | 1.26.4 (from `go.mod`) | Language runtime and compiler | `make deps` (via mise + `.mise.toml`) |
 | `librdkafka` + C toolchain | latest | Required by `confluent-kafka-go` (CGO) | System package (Alpine: `librdkafka-dev musl-dev gcc g++`) |
 | [Docker](https://www.docker.com/) | latest | Container builds and Compose | — |
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment, required for `make e2e` | — |
@@ -76,28 +76,25 @@ make deps
 ### Container View
 
 ```mermaid
-C4Container
-  title Container View — go-kafka-confluent-examples
+flowchart LR
+  dev(["Developer / Operator"])
 
-  Person(dev, "Developer / Operator")
+  subgraph sys["go-kafka-confluent-examples"]
+    direction TB
+    producer["<b>Producer</b><br/>Go + confluent-kafka-go (CGO / librdkafka)<br/>publishes to test-topic"]
+    consumer["<b>Consumer</b><br/>Go + confluent-kafka-go (CGO / librdkafka)<br/>subscribes and logs"]
+    cm[("ConfigMap (k8s)<br/>kafka.properties")]
+    secret[("Secret (k8s)<br/>API key / secret")]
+  end
 
-  System_Boundary(sys, "go-kafka-confluent-examples") {
-    Container(producer, "Producer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Publishes messages to test-topic")
-    Container(consumer, "Consumer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Subscribes and logs messages")
-    Container(cm, "ConfigMap", "Kubernetes", "kafka.properties — bootstrap server, SASL mechanism")
-    Container(secret, "Secret", "Kubernetes", "API key and secret for SASL/PLAIN auth")
-  }
+  topic[("Confluent Cloud Topic<br/>test-topic")]
 
-  System_Ext(topic, "Confluent Cloud Topic", "test-topic — partitioned, replicated")
-
-  Rel(dev, producer, "make kafka-run-producer")
-  Rel(dev, consumer, "make kafka-run-consumer / kubectl apply")
-  Rel(producer, cm, "Reads config")
-  Rel(consumer, cm, "Reads config")
-  Rel(producer, secret, "Reads credentials")
-  Rel(consumer, secret, "Reads credentials")
-  Rel(producer, topic, "Produces", "Kafka / SASL_SSL")
-  Rel(consumer, topic, "Consumes", "Kafka / SASL_SSL")
+  dev -->|make kafka-run-producer| producer
+  dev -->|make kafka-run-consumer / kubectl apply| consumer
+  consumer -->|reads config| cm
+  consumer -->|reads credentials| secret
+  producer -->|produces · SASL_SSL| topic
+  consumer -->|consumes · SASL_SSL| topic
 ```
 
 - **Producer** / **Consumer** — statically-linked Go binaries; both depend on `librdkafka` via CGO (see [`Dockerfile.consumer`](Dockerfile.consumer) and [`Dockerfile.producer`](Dockerfile.producer) for the Alpine build chain). The producer is a one-shot CLI (publishes `NUM_MESSAGES` then exits); the consumer is a long-running subscriber.
@@ -224,7 +221,7 @@ Run `make help` to see all available targets.
 | `make format` | Format Go code (`gofmt -s -w .`) |
 | `make format-check` | Verify code is formatted (CI gate) |
 | `make lint` | Run golangci-lint and hadolint |
-| `make static-check` | Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
+| `make static-check` | Composite quality gate (check-toolchain-alignment + format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
 | `make clean` | Remove build artifacts |
 | `make kafka-run-producer` | Build and run producer |
 | `make kafka-run-consumer` | Build and run consumer |
@@ -244,6 +241,7 @@ Run `make help` to see all available targets.
 
 | Target | Description |
 |--------|-------------|
+| `make check-toolchain-alignment` | Verify the Go version matches across `go.mod`, `.mise.toml`, and both Dockerfiles |
 | `make sec` | gosec static security analysis |
 | `make vulncheck` | govulncheck vulnerability scan |
 | `make secrets` | gitleaks secret scan |
@@ -265,12 +263,13 @@ Run `make help` to see all available targets.
 |--------|-------------|
 | `make k8s-deploy` | Deploy to Kubernetes |
 | `make k8s-undeploy` | Remove from Kubernetes |
+| `make kind-tools-install` | Install kind + kubectl into `~/.local/bin` (used by the CI `e2e` job and locally) |
 
 ### CI
 
 | Target | Description |
 |--------|-------------|
-| `make ci` | Run all CI checks (static-check, test, build) |
+| `make ci` | Run all CI checks (static-check, test, integration-test, build) |
 | `make ci-run` | Run GitHub Actions workflow locally via [act](https://github.com/nektos/act) |
 
 ### Release & Utilities
@@ -298,7 +297,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `build` | push, PR (when code changes) | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Aggregator for branch protection — passes when all upstream jobs are `success` or `skipped` |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | every code-changing push (publish gated to tags) | Build single-arch for scan → Trivy image scan → smoke test → multi-arch validation build (push gated by tag) → cosign sign (tag only). Runs every code push so multi-arch cross-compile regressions and cosign installer breakage surface on the commit that introduced them, not release day |
+| `docker` | tags only | Build single-arch for scan → Trivy image scan → smoke test → multi-arch build (`linux/amd64,linux/arm64`) → ghcr.io push → cosign sign. The entire job runs only when cutting a tag/release (keeps the PR pipeline fast; base-image / toolchain CVEs and multi-arch / cosign regressions surface at release time) |
 
 ### Required Secrets and Variables
 
@@ -311,11 +310,11 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 The cleanup workflow (`cleanup-runs.yml`) runs weekly to prune workflow runs (retains 7 days, keeps minimum 5 runs).
 
-[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with `platformAutomerge: true` and `automergeType: "branch"`.
+[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with `platformAutomerge: true` and `automergeType: "pr"` (squash) — PR automerge is used because `main` has the `ci-pass` required status check.
 
 ### Pre-push image hardening
 
-The `docker` job runs the following gates **before** any image is pushed to `ghcr.io`. Any failure blocks the release.
+When a tag/release is cut, the `docker` job runs the following gates **before** any image is pushed to `ghcr.io`. Any failure blocks the release.
 
 | # | Gate | Catches | Tool |
 |---|------|---------|------|
