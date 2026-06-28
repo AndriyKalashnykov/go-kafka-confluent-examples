@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://app.renovatebot.com/dashboard#github/AndriyKalashnykov/go-kafka-confluent-examples)
 
-# Go producer & consumer examples for Confluent Kafka Cloud
+# Go producer & consumer examples for Confluent Cloud Kafka
 
-Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS.
+Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS — validated by a three-layer test pyramid (unit, Testcontainers integration, KinD + Compose e2e) and a supply-chain–hardened GitHub Actions pipeline (Trivy image scan, cosign keyless OIDC signing).
 
 ```mermaid
 C4Context
@@ -224,7 +224,7 @@ Run `make help` to see all available targets.
 | `make format` | Format Go code (`gofmt -s -w .`) |
 | `make format-check` | Verify code is formatted (CI gate) |
 | `make lint` | Run golangci-lint and hadolint |
-| `make static-check` | Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
+| `make static-check` | Composite quality gate (check-toolchain-alignment + format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint) |
 | `make clean` | Remove build artifacts |
 | `make kafka-run-producer` | Build and run producer |
 | `make kafka-run-consumer` | Build and run consumer |
@@ -244,6 +244,7 @@ Run `make help` to see all available targets.
 
 | Target | Description |
 |--------|-------------|
+| `make check-toolchain-alignment` | Verify the Go version matches across `go.mod`, `.mise.toml`, and both Dockerfiles |
 | `make sec` | gosec static security analysis |
 | `make vulncheck` | govulncheck vulnerability scan |
 | `make secrets` | gitleaks secret scan |
@@ -265,12 +266,13 @@ Run `make help` to see all available targets.
 |--------|-------------|
 | `make k8s-deploy` | Deploy to Kubernetes |
 | `make k8s-undeploy` | Remove from Kubernetes |
+| `make kind-tools-install` | Install kind + kubectl into `~/.local/bin` (used by the CI `e2e` job and locally) |
 
 ### CI
 
 | Target | Description |
 |--------|-------------|
-| `make ci` | Run all CI checks (static-check, test, build) |
+| `make ci` | Run all CI checks (static-check, test, integration-test, build) |
 | `make ci-run` | Run GitHub Actions workflow locally via [act](https://github.com/nektos/act) |
 
 ### Release & Utilities
@@ -311,7 +313,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 
 The cleanup workflow (`cleanup-runs.yml`) runs weekly to prune workflow runs (retains 7 days, keeps minimum 5 runs).
 
-[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with `platformAutomerge: true` and `automergeType: "branch"`.
+[Renovate](https://docs.renovatebot.com/) keeps dependencies up to date with `platformAutomerge: true` and `automergeType: "pr"` (squash) — PR automerge is used because `main` has the `ci-pass` required status check.
 
 ### Pre-push image hardening
 

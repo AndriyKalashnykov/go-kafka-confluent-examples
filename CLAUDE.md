@@ -44,8 +44,8 @@ make e2e-compose    # E2E via Docker Compose (PLAINTEXT broker + consumer image)
 make e2e            # E2E via KinD cluster + in-cluster Kafka + real k8s/ manifests
 make format         # Format Go code
 make lint           # Run golangci-lint and hadolint
-make static-check   # Composite quality gate (format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
-make ci             # Run all CI checks (static-check, test, build)
+make static-check   # Composite quality gate (check-toolchain-alignment + format-check + deps-prune-check + lint + lint-ci + sec + vulncheck + secrets + trivy-fs + mermaid-lint)
+make ci             # Run all CI checks (static-check, test, integration-test, build)
 make ci-run         # Run GitHub Actions workflow locally via act
 make clean          # Remove build artifacts
 make deps           # Install and verify required tools (mise + Go)
@@ -64,7 +64,7 @@ make deps-check     # Show required Go version and mise status
 - **Unit** (`make test`): tests against `applyDefaults` helpers, `produceWithRetry` (driven by an injected fake `*kafka.Producer`), `BuildKafkaConfigMap`, and broker-unreachable / ctx-cancel guard rails. Runs in seconds, no Docker.
 - **Integration** (`make integration-test`): `internal/kafkaroundtrip/roundtrip_integration_test.go` — Apache Kafka 3.9.0 KRaft container via Testcontainers. Three tests: end-to-end produce/consume round-trip, ctx-cancel exit, MaxMessages early-return. Tens of seconds; requires Docker.
 - **E2E (compose)** (`make e2e-compose`): `e2e/docker-compose.e2e.yml` boots PLAINTEXT Kafka + builds **both** Dockerfiles (`Dockerfile.consumer` long-lived service, `Dockerfile.producer` one-shot job). Asserts the producer-binary publish path AND the consumer-binary consume path round-trip via a real broker.
-- **E2E (KinD)** (`make e2e`): `e2e/e2e-kind-test.sh` deploys real `k8s/` manifests (with PLAINTEXT overlays in `e2e/k8s/`) into a throwaway KinD cluster. Pins kubectl to `kind-kafka-e2e` context (`KUBECTL=(kubectl --context=kind-kafka-e2e)`) so a sibling project's `kubectl config use-context` cannot redirect calls to the wrong cluster. The Kafka rollout step retries up to 3× to absorb docker.io pull-rate-limit hiccups.
+- **E2E (KinD)** (`make e2e`): `e2e/e2e-kind-test.sh` deploys real `k8s/` manifests (with PLAINTEXT overlays in `e2e/k8s/`) into a throwaway KinD cluster. Pins kubectl to the `kind-${CLUSTER}` context (`KUBECTL=(kubectl --context=kind-${CLUSTER})`, `CLUSTER=kafka-e2e`) so a sibling project's `kubectl config use-context` cannot redirect calls to the wrong cluster. The Kafka rollout step retries up to 3× to absorb docker.io pull-rate-limit hiccups.
 
 ### Running
 
@@ -95,7 +95,8 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | Job | Triggers | Steps |
 |-----|----------|-------|
 | `setup` | push, PR | Extract Go version from `go.mod` for downstream jobs |
-| `static-check` | push, PR | `make static-check` composite |
+| `changes` | push, PR | [`dorny/paths-filter`](https://github.com/dorny/paths-filter) — classifies code vs docs-only; emits `code` to gate the heavy jobs' `if:` |
+| `static-check` | push, PR (when code changes) | `make static-check` composite |
 | `test` | push, PR | Unit tests (matrix: ubuntu-latest + macos-latest) |
 | `integration-test` | push, PR | `make integration-test` (Testcontainers-backed; ubuntu-latest) |
 | `e2e-compose` | push, PR | `make e2e-compose` (Docker Compose + PLAINTEXT broker; ubuntu-latest) |
@@ -103,9 +104,9 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Branch-protection aggregator |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | tags only | Multi-arch build (`linux/amd64,linux/arm64`) + Trivy scan + smoke test + push to ghcr.io + cosign sign |
+| `docker` | every code-changing push (publish + sign tag-gated) | Build single-arch → Trivy image scan → smoke test → multi-arch build (`linux/amd64,linux/arm64`); ghcr.io push + cosign sign run on tags only |
 
-Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs).
+Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs **per workflow** so each workflow's badge always has a surviving run).
 
 ## Code Conventions
 
@@ -114,7 +115,7 @@ Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (r
 - Binary output directory: `.bin/`
 - Use `make ci` to validate changes locally before pushing
 - mise (`.mise.toml`) is the single source of truth for the host toolchain — Go, Node, and all lint/security scanners. `make deps` bootstraps mise and runs `mise install`. CI uses `actions/setup-go` (with `go-version-file: go.mod`) for the Go cache and runs `make deps` for everything else
-- Docker-image-only tool pins (no host install) live in the Makefile with `# renovate:` inline comments: `MERMAID_CLI_VERSION` (mermaid-cli) and `GOLANG_CROSS_VERSION` (goreleaser-cross). `KIND_VERSION` and `KUBECTL_VERSION` live in `scripts/kind-tools-install.sh` (called by `make kind-tools-install` from both local dev and the CI `e2e` job) — tracked by a third `customManagers` regex in `renovate.json`
+- Docker-image-only tool pins (no host install) live in the Makefile with `# renovate:` inline comments: `MERMAID_CLI_VERSION` (mermaid-cli) and `GOLANG_CROSS_VERSION` (goreleaser-cross). `KIND_VERSION` and `KUBECTL_VERSION` live in `scripts/kind-tools-install.sh` (called by `make kind-tools-install` from both local dev and the CI `e2e` job) — tracked by the `scripts/*.sh` `customManagers` regex in `renovate.json`
 - `KUBECTL ?= kubectl` indirection in the Makefile lets `make k8s-deploy KUBECTL='kubectl --context=...'` pin a specific cluster without changing the recipe; the e2e KinD harness pins `kubectl --context=kind-${CLUSTER}` inline (see `e2e/e2e-kind-test.sh`) to defend against sibling projects swapping the global current-context
 
 ## Skills

@@ -25,8 +25,13 @@ jobs:
       - name: Delete old workflow runs
         run: |
           CUTOFF=$(date -u -d "${RETAIN_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          # Retain per WORKFLOW, not globally: group_by(.workflowName) so each
+          # workflow keeps its newest KEEP_MINIMUM runs. A global keep-N prunes
+          # every CI run when `main` is quiet (the weekly cleanup runs fill the
+          # N newest slots), which makes the README CI badge 404 (a workflow
+          # with zero surviving runs has no badge state).
           gh run list --repo "${{ github.repository }}" \
-            --json databaseId,createdAt --limit 200 \
+            --json databaseId,createdAt,workflowName --limit 200 \
             | jq -r --arg cutoff "$CUTOFF" --argjson keep "$KEEP_MINIMUM" \
-                'sort_by(.createdAt) | reverse | .[$keep:] | .[] | select(.createdAt < $cutoff) | .databaseId' \
+                'group_by(.workflowName) | map(sort_by(.createdAt) | reverse | .[$keep:]) | flatten | .[] | select(.createdAt < $cutoff) | .databaseId' \
             | xargs -r -I{} gh run delete {} --repo "${{ github.repository }}"
