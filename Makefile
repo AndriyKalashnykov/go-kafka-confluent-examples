@@ -7,7 +7,10 @@ SHELL := /bin/bash
 # still hand-installed.
 export PATH := $(HOME)/.local/share/mise/shims:$(HOME)/.local/bin:$(PATH)
 
-CURRENTTAG := $(shell git describe --tags --abbrev=0)
+# `2>/dev/null || echo v0.0.0` keeps shallow/tagless CI checkouts (actions/checkout
+# default fetch-depth:1 fetches no tags) from printing "fatal: No names found,
+# cannot describe anything." on every make invocation; falls back to v0.0.0.
+CURRENTTAG := $(shell git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)
 CONSUMER_IMG ?= kafka-confluent-go-consumer:$(CURRENTTAG)
 GOFLAGS = -mod=mod
 GOPRIVATE = github.com/AndriyKalashnykov/go-kafka-confluent-examples
