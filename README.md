@@ -8,17 +8,13 @@
 Reference implementation of a [Confluent Cloud](https://confluent.cloud/) Kafka producer and consumer in Go using the [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go/) client. Demonstrates CGO-linked `librdkafka` builds, Kubernetes `ConfigMap`/`Secret` credential injection, Docker Compose local runtime, and GoReleaser cross-compilation for Linux + macOS — validated by a three-layer test pyramid (unit, Testcontainers integration, KinD + Compose e2e) and a supply-chain–hardened GitHub Actions pipeline (Trivy image scan, cosign keyless OIDC signing).
 
 ```mermaid
-C4Context
-  title System Context — go-kafka-confluent-examples
+flowchart LR
+  dev(["Developer / Operator<br/>runs binaries locally or deploys to k8s"])
+  sys["<b>Kafka Producer &amp; Consumer</b><br/>two Go CLIs (CGO / librdkafka)<br/>publish &amp; subscribe to a topic"]
+  ccloud[("Confluent Cloud<br/>managed Kafka · SASL/PLAIN over TLS 9092")]
 
-  Person(dev, "Developer / Operator", "Runs binaries locally or deploys to Kubernetes")
-  System(sys, "Kafka Producer & Consumer", "Two Go CLIs publishing and subscribing to a Confluent Cloud topic")
-  System_Ext(ccloud, "Confluent Cloud", "Managed Kafka cluster (SASL/PLAIN over TLS 9092)")
-
-  Rel(dev, sys, "Builds, runs, deploys", "make / docker / kubectl")
-  Rel(sys, ccloud, "Produces & consumes", "Kafka protocol, SASL_SSL")
-
-  UpdateLayoutConfig($c4ShapeInRow="3")
+  dev -->|builds · runs · deploys<br/>make / docker / kubectl| sys
+  sys -->|produces &amp; consumes<br/>Kafka · SASL_SSL| ccloud
 ```
 
 A developer builds the producer and consumer binaries (or the consumer container image) and points them at a Confluent Cloud cluster. Authentication is SASL/PLAIN over TLS on port 9092; credentials live in `.env` locally and in a Kubernetes `Secret` when deployed.

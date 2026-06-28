@@ -116,7 +116,16 @@
         "/govulncheck/",
         "/nektos\\/act/"
       ],
-      "groupName": "mise lint & security tools",
+      "groupName": "mise lint & security tools"
+    },
+    {
+      "description": "Hold every github-tags-tracked mise tool (the aqua: lint/security scanners) for 3 days so the upstream GitHub Release artifacts mise installs are published before the bump PR opens — prevents the tag-before-publish 404. Scoped by datasource so it covers all current AND future aqua tools without coupling to the lint grouping or touching the go/node core pins.",
+      "matchManagers": [
+        "mise"
+      ],
+      "matchDatasources": [
+        "github-tags"
+      ],
       "minimumReleaseAge": "3 days"
     },
     {
