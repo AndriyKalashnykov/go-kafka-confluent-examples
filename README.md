@@ -297,7 +297,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `build` | push, PR (when code changes) | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Aggregator for branch protection — passes when all upstream jobs are `success` or `skipped` |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | every code-changing push (publish gated to tags) | Build single-arch for scan → Trivy image scan → smoke test → multi-arch validation build (push gated by tag) → cosign sign (tag only). Runs every code push so multi-arch cross-compile regressions and cosign installer breakage surface on the commit that introduced them, not release day |
+| `docker` | tags only | Build single-arch for scan → Trivy image scan → smoke test → multi-arch build (`linux/amd64,linux/arm64`) → ghcr.io push → cosign sign. The entire job runs only when cutting a tag/release (keeps the PR pipeline fast; base-image / toolchain CVEs and multi-arch / cosign regressions surface at release time) |
 
 ### Required Secrets and Variables
 
@@ -314,7 +314,7 @@ The cleanup workflow (`cleanup-runs.yml`) runs weekly to prune workflow runs (re
 
 ### Pre-push image hardening
 
-The `docker` job runs the following gates **before** any image is pushed to `ghcr.io`. Any failure blocks the release.
+When a tag/release is cut, the `docker` job runs the following gates **before** any image is pushed to `ghcr.io`. Any failure blocks the release.
 
 | # | Gate | Catches | Tool |
 |---|------|---------|------|

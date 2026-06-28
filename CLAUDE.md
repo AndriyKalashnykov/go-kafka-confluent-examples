@@ -104,7 +104,7 @@ GitHub Actions runs on every push to `main`, tags `v*`, and pull requests.
 | `build` | push, PR | Matrix: ubuntu-latest + macos-latest |
 | `ci-pass` | always | Branch-protection aggregator |
 | `release-binaries` | tags only | GoReleaser cross-compilation (Linux + macOS) |
-| `docker` | every code-changing push (publish + sign tag-gated) | Build single-arch → Trivy image scan → smoke test → multi-arch build (`linux/amd64,linux/arm64`); ghcr.io push + cosign sign run on tags only |
+| `docker` | tags only | Build → Trivy image scan → smoke test → multi-arch build (`linux/amd64,linux/arm64`) → ghcr.io push → cosign sign — the entire job runs only when cutting a tag/release |
 
 Cleanup workflow (`cleanup-runs.yml`) runs weekly to remove old workflow runs (retains 7 days, keeps minimum 5 runs **per workflow** so each workflow's badge always has a surviving run).
 
