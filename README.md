@@ -27,7 +27,7 @@ A developer builds the producer and consumer binaries (or the consumer container
 
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.26.2 |
+| Language | Go 1.26.4 |
 | Kafka client | [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go) v2.14.1 |
 | Native library | `librdkafka` (CGO-linked) |
 | Build | Make, GoReleaser (cross-compilation) |
@@ -54,7 +54,7 @@ make kafka-run-consumer    # run consumer
 |------|---------|---------|-------------------|
 | [GNU Make](https://www.gnu.org/software/make/) | 3.81+ | Build orchestration | — |
 | [mise](https://mise.jdx.dev) | latest | Go + Node version management | `make deps` |
-| [Go](https://go.dev/dl/) | 1.26.2 (from `go.mod`) | Language runtime and compiler | `make deps` (via mise + `.mise.toml`) |
+| [Go](https://go.dev/dl/) | 1.26.4 (from `go.mod`) | Language runtime and compiler | `make deps` (via mise + `.mise.toml`) |
 | `librdkafka` + C toolchain | latest | Required by `confluent-kafka-go` (CGO) | System package (Alpine: `librdkafka-dev musl-dev gcc g++`) |
 | [Docker](https://www.docker.com/) | latest | Container builds and Compose | — |
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | latest | Kubernetes deployment, required for `make e2e` | — |
@@ -76,28 +76,25 @@ make deps
 ### Container View
 
 ```mermaid
-C4Container
-  title Container View — go-kafka-confluent-examples
+flowchart LR
+  dev(["Developer / Operator"])
 
-  Person(dev, "Developer / Operator")
+  subgraph sys["go-kafka-confluent-examples"]
+    direction TB
+    producer["<b>Producer</b><br/>Go + confluent-kafka-go (CGO / librdkafka)<br/>publishes to test-topic"]
+    consumer["<b>Consumer</b><br/>Go + confluent-kafka-go (CGO / librdkafka)<br/>subscribes and logs"]
+    cm[("ConfigMap (k8s)<br/>kafka.properties")]
+    secret[("Secret (k8s)<br/>API key / secret")]
+  end
 
-  System_Boundary(sys, "go-kafka-confluent-examples") {
-    Container(producer, "Producer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Publishes messages to test-topic")
-    Container(consumer, "Consumer", "Go 1.26, confluent-kafka-go v2.14.1 (CGO + librdkafka)", "Subscribes and logs messages")
-    Container(cm, "ConfigMap", "Kubernetes", "kafka.properties — bootstrap server, SASL mechanism")
-    Container(secret, "Secret", "Kubernetes", "API key and secret for SASL/PLAIN auth")
-  }
+  topic[("Confluent Cloud Topic<br/>test-topic")]
 
-  System_Ext(topic, "Confluent Cloud Topic", "test-topic — partitioned, replicated")
-
-  Rel(dev, producer, "make kafka-run-producer")
-  Rel(dev, consumer, "make kafka-run-consumer / kubectl apply")
-  Rel(producer, cm, "Reads config")
-  Rel(consumer, cm, "Reads config")
-  Rel(producer, secret, "Reads credentials")
-  Rel(consumer, secret, "Reads credentials")
-  Rel(producer, topic, "Produces", "Kafka / SASL_SSL")
-  Rel(consumer, topic, "Consumes", "Kafka / SASL_SSL")
+  dev -->|make kafka-run-producer| producer
+  dev -->|make kafka-run-consumer / kubectl apply| consumer
+  consumer -->|reads config| cm
+  consumer -->|reads credentials| secret
+  producer -->|produces · SASL_SSL| topic
+  consumer -->|consumes · SASL_SSL| topic
 ```
 
 - **Producer** / **Consumer** — statically-linked Go binaries; both depend on `librdkafka` via CGO (see [`Dockerfile.consumer`](Dockerfile.consumer) and [`Dockerfile.producer`](Dockerfile.producer) for the Alpine build chain). The producer is a one-shot CLI (publishes `NUM_MESSAGES` then exits); the consumer is a long-running subscriber.

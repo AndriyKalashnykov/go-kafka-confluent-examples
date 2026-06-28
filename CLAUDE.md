@@ -6,7 +6,7 @@ Go-based Confluent Kafka Cloud producer/consumer examples using the [confluent-k
 
 ## Tech Stack
 
-- **Language**: Go 1.26.2
+- **Language**: Go 1.26.4
 - **Kafka Client**: confluent-kafka-go v2.14.1 (CGO, `librdkafka`)
 - **Build**: Make, GoReleaser (cross-compilation)
 - **Container**: Docker, Docker Compose

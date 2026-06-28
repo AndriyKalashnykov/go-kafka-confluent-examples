@@ -116,7 +116,8 @@
         "/govulncheck/",
         "/nektos\\/act/"
       ],
-      "groupName": "mise lint & security tools"
+      "groupName": "mise lint & security tools",
+      "minimumReleaseAge": "3 days"
     },
     {
       "description": "Group the Go toolchain (go.mod directive, both Dockerfiles' golang base image, .mise.toml go pin) into ONE PR so a Go bump cannot split into individually-unmergeable PRs across managers. Pairs with the `make check-toolchain-alignment` gate.",
